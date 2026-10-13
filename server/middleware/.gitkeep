@@ -1,0 +1,6 @@
+# Express Custom Middleware
+# Request pipeline intercepts and security layers.
+# Future middleware:
+# - authMiddleware.js (JWT verification)
+# - roleMiddleware.js (Student vs Admin RBAC)
+# - errorMiddleware.js (Centralized exception handling)

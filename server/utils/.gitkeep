@@ -1,0 +1,5 @@
+# Utility Helpers
+# Shared utility functions and formatting helpers.
+# Future utilities:
+# - scoreCalculator.js (Math and weighting helpers)
+# - responseFormatter.js (Consistent API response wrappers)

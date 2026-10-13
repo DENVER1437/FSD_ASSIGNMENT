@@ -1,0 +1,10 @@
+# API Route Definitions
+# Maps URL endpoints to corresponding controllers and middleware.
+# Future route modules:
+# - authRoutes.js (/api/auth)
+# - userRoutes.js (/api/users)
+# - preferenceRoutes.js (/api/preferences)
+# - matchRoutes.js (/api/matches)
+# - requestRoutes.js (/api/requests)
+# - messageRoutes.js (/api/messages)
+# - adminRoutes.js (/api/admin)

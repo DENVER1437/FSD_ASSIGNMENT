@@ -1,0 +1,5 @@
+# Business Logic Services
+# Encapsulates core domain computations and third-party integrations.
+# Future services:
+# - matchService.js (Compatibility scoring and explainability calculation)
+# - tokenService.js (JWT issuance and verification)

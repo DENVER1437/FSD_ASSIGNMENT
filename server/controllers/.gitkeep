@@ -1,0 +1,10 @@
+# Controllers Directory
+# Handles incoming HTTP requests and generates client responses.
+# Future controllers to be added in Phase 4+:
+# - authController.js
+# - userController.js
+# - preferenceController.js
+# - matchController.js
+# - requestController.js
+# - messageController.js
+# - adminController.js

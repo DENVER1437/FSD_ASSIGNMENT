@@ -1,0 +1,5 @@
+# Request Validators
+# Input schema validations and data sanitization.
+# Future validators:
+# - authValidator.js (Registration & login payload schemas)
+# - preferenceValidator.js (Questionnaire choices and bounds)
