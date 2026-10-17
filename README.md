@@ -1,6 +1,6 @@
 # NestMatch – Smart Roommate Compatibility Finder
 
-[![Status](https://img.shields.io/badge/Phase-Phase%200%20Foundation%20Complete-success)](#development-roadmap)
+[![Status](https://img.shields.io/badge/Phase-Phase%201%20Frontend%20UI%20Complete-success)](#development-roadmap)
 [![Stack](https://img.shields.io/badge/Stack-MERN-blue)](#technology-stack)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
@@ -196,8 +196,8 @@ FINAL DEMO + VIVA
 
 ### 1. Clone & Setup
 ```bash
-git clone <repository-url>
-cd NestMatch
+git clone https://github.com/kotechameet485-droid/fsd-assigment.git
+cd fsd-assigment
 ```
 
 ### 2. Frontend Setup
@@ -221,9 +221,8 @@ npm run dev
 
 ---
 
-## 11. Authors & Team Placeholder
+## 11. Authors & Team
 
-- **Student / Author**: `[Student Name Placeholder]`
+- **Student / Author**: Meet Kotecha
 - **Course**: Full Stack Development (FSD)
-- **Institution**: `[College / University Placeholder]`
 - **Academic Year**: 2026
