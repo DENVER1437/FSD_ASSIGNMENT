@@ -1,61 +1,146 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { connectDB, isDBConnected, disconnectDB } from './config/db.js';
 
-// Load environment variables from .env if present
+// Route handlers
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import preferenceRoutes from './routes/preferenceRoutes.js';
+import matchRoutes from './routes/matchRoutes.js';
+import requestRoutes from './routes/requestRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+
+// Middleware
+import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
+
+// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-// Middleware configuration
-app.use(cors({
-  origin: CLIENT_URL,
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Validate core configuration
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('[Warning]: JWT_SECRET is not explicitly defined. Using development default.');
+}
 
-// Phase 0 Health Check / API Base Route
+// Security & Parsing Middleware
+const allowedOrigins = [
+  CLIENT_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive in dev to avoid blocking testers
+      }
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+
+// Root welcome endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Welcome to NestMatch REST API service.',
+    documentation: '/api/health',
+  });
+});
+
+// Lightweight Health Check (Public)
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
     project: 'NestMatch – Smart Roommate Compatibility Finder',
-    phase: 'Phase 0 — Project Foundation',
+    uptime: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
   });
 });
 
-// Root API Welcome Route
-app.get('/', (req, res) => {
-  res.status(200).json({
-    message: 'Welcome to NestMatch API service. Use /api/health for system status.',
-  });
+// Readiness Probe (Verifies MongoDB Connectivity)
+app.get('/api/ready', (req, res) => {
+  const dbStatus = isDBConnected();
+  if (dbStatus) {
+    return res.status(200).json({
+      status: 'ready',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    });
+  } else {
+    return res.status(503).json({
+      status: 'not_ready',
+      database: 'disconnected',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
-// 404 Not Found Handler for undefined routes
-app.use((req, res, next) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Cannot ${req.method} ${req.originalUrl} - Endpoint not found`,
-  });
-});
+// Mount Core Application Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/preferences', preferenceRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Global Centralized Error Handler
-app.use((err, req, res, next) => {
-  console.error('[Unhandled Error]:', err.stack);
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: err.message || 'Internal Server Error',
-  });
-});
+// 404 Catch-All & Centralized Error Middleware
+app.use(notFoundHandler);
+app.use(errorHandler);
 
-// Start Server Listener
-app.listen(PORT, () => {
-  console.log(`[NestMatch Server] Running on http://localhost:${PORT}`);
-  console.log(`[CORS Configured] Allowed Client Origin: ${CLIENT_URL}`);
-  console.log(`[Health Endpoint] Available at http://localhost:${PORT}/api/health`);
-});
+// Server Lifecycle Management
+let server;
+
+const startServer = async () => {
+  try {
+    // Connect to database before accepting requests
+    await connectDB();
+
+    server = app.listen(PORT, () => {
+      console.log(`[NestMatch Server] Active on port ${PORT}`);
+      console.log(`[Health Endpoint] http://localhost:${PORT}/api/health`);
+      console.log(`[Readiness Probe] http://localhost:${PORT}/api/ready`);
+    });
+  } catch (error) {
+    console.error('[Startup Error]: Could not establish MongoDB connection.', error.message);
+    // Allow server to run so health probes can diagnose, but log failure
+    server = app.listen(PORT, () => {
+      console.log(`[NestMatch Server] Running in DEGRADED mode on port ${PORT} (Database Offline)`);
+    });
+  }
+};
+
+startServer();
+
+// Graceful Shutdown
+const handleShutdown = async (signal) => {
+  console.log(`\n[${signal}] Initiating graceful server shutdown...`);
+  if (server) {
+    server.close(async () => {
+      console.log('[HTTP Server] Closed active connections.');
+      await disconnectDB();
+      process.exit(0);
+    });
+  } else {
+    await disconnectDB();
+    process.exit(0);
+  }
+};
+
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
 export default app;
