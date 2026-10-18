@@ -12,10 +12,15 @@ node_modules
 dist
 dist-ssr
 
-# Environment files
+# Environment & Secrets (CRITICAL)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.cert
+*.pfx
 
 # Editor and OS
 .vscode/*

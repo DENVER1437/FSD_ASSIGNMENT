@@ -36,6 +36,9 @@ api.interceptors.response.use(
         // Clear expired or invalid token
         localStorage.removeItem('nestmatch_token');
         localStorage.removeItem('nestmatch_user');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        }
       }
     }
     return Promise.reject(error);

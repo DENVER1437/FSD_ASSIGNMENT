@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Home, Shield, Heart } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 
 export function Footer() {
   return (
@@ -8,14 +9,13 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white">
-                <Home className="w-4 h-4" />
-              </div>
-              <span className="text-xl font-extrabold tracking-tight text-white">
-                Nest<span className="text-brand-500">Match</span>
-              </span>
-            </div>
+            <Link
+              to="/"
+              className="inline-block bg-white/95 hover:bg-white px-3.5 py-1.5 rounded-2xl shadow-sm transition"
+              aria-label="NestMatch Home"
+            >
+              <BrandLogo variant="horizontal" size="md" />
+            </Link>
             <p className="text-sm text-stone-400 max-w-sm leading-relaxed">
               Smart Roommate Compatibility Platform for university students. Discover harmonious living through lifestyle preference alignment and explainable scores.
             </p>

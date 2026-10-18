@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, User, Mail, Lock, Building, MapPin, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Lock, Building, MapPin, Eye, EyeOff } from 'lucide-react';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import Checkbox from '../components/Checkbox';
 import Card from '../components/Card';
+import BrandLogo from '../components/BrandLogo';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
@@ -62,7 +63,7 @@ export function RegisterPage() {
         setError(res.message || 'Registration failed.');
       }
     } catch (err) {
-      setError('An error occurred during registration.');
+      setError(err?.response?.data?.message || err?.message || 'An error occurred during registration.');
     } finally {
       setLoading(false);
     }
@@ -71,13 +72,12 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-surface-warm flex flex-col justify-center py-10 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link to="/" className="inline-flex items-center gap-2.5 mb-4 group">
-          <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm group-hover:bg-brand-700 transition">
-            <Home className="w-5 h-5" />
-          </div>
-          <span className="text-2xl font-extrabold tracking-tight text-charcoal">
-            Nest<span className="text-brand-600">Match</span>
-          </span>
+        <Link
+          to="/"
+          className="inline-flex justify-center mb-5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 rounded-2xl"
+          aria-label="NestMatch Home"
+        >
+          <BrandLogo variant="horizontal" size="lg" priority className="group-hover:scale-105" />
         </Link>
         <h2 className="text-2xl font-extrabold text-charcoal tracking-tight">
           Create student account

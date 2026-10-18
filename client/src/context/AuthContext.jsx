@@ -46,6 +46,20 @@ export function AuthProvider({ children }) {
     restoreSession();
   }, []);
 
+  // Listen for unauthorized 401 events dispatched by Axios interceptor
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      localStorage.removeItem('nestmatch_token');
+      localStorage.removeItem('nestmatch_user');
+      setUser(null);
+      setRole(null);
+      setIsAuthenticated(false);
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
   const login = async (email, password) => {
     try {
       const res = await authService.login(email, password);

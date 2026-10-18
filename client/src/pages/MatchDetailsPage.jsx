@@ -7,7 +7,6 @@ import {
   Building,
   MapPin,
   BookOpen,
-  DollarSign,
   Sparkles,
   Send,
   MessageSquare,
@@ -20,14 +19,12 @@ import Avatar from '../components/Avatar';
 import ScoreBadge from '../components/ScoreBadge';
 import EmptyState from '../components/EmptyState';
 import { useMatch } from '../context/MatchContext';
-import { useToast } from '../context/ToastContext';
 import { matchService } from '../services/matchService';
 
 export function MatchDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { matches, requests, sendRequest } = useMatch();
-  const { showToast } = useToast();
 
   const [directMatch, setDirectMatch] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -230,37 +227,41 @@ export function MatchDetailsPage() {
         </h2>
 
         <div className="space-y-5">
-          {match.categoryBreakdown.map((cat, idx) => (
-            <div key={idx} className="space-y-1.5 pb-4 border-b border-stone-100 last:border-0 last:pb-0">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-charcoal">{cat.name}</span>
-                <span
-                  className={
-                    cat.score >= 90
-                      ? 'text-emerald-600'
-                      : cat.score >= 70
-                      ? 'text-brand-600'
-                      : 'text-amber-600'
-                  }
-                >
-                  {cat.score}% • {cat.status}
-                </span>
+          {match.categoryBreakdown.map((cat, idx) => {
+            const hasScore = cat.score !== null && cat.score !== undefined;
+            const scoreColor = !hasScore
+              ? 'text-stone-400'
+              : cat.score >= 90
+              ? 'text-emerald-600'
+              : cat.score >= 70
+              ? 'text-brand-600'
+              : 'text-amber-600';
+            const barBg = !hasScore
+              ? 'bg-stone-300'
+              : cat.score >= 90
+              ? 'bg-emerald-600'
+              : cat.score >= 70
+              ? 'bg-brand-600'
+              : 'bg-amber-500';
+
+            return (
+              <div key={idx} className="space-y-1.5 pb-4 border-b border-stone-100 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-charcoal">{cat.name}</span>
+                  <span className={scoreColor}>
+                    {hasScore ? `${cat.score}%` : 'N/A'} • {cat.status}
+                  </span>
+                </div>
+                <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${barBg}`}
+                    style={{ width: hasScore ? `${cat.score}%` : '0%' }}
+                  />
+                </div>
+                <p className="text-[11px] text-stone-500 pt-0.5">{cat.note}</p>
               </div>
-              <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
-                <div
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    cat.score >= 90
-                      ? 'bg-emerald-600'
-                      : cat.score >= 70
-                      ? 'bg-brand-600'
-                      : 'bg-amber-500'
-                  }`}
-                  style={{ width: `${cat.score}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-stone-500 pt-0.5">{cat.note}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
     </div>

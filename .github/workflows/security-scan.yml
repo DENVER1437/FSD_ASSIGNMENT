@@ -1,0 +1,48 @@
+name: Security & Quality Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-audit:
+    name: Secret Scanning & Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Static Secret Scan
+        run: node scripts/scan-secrets.js
+
+      - name: Install Backend Dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Run Backend Unit & Security Regression Tests
+        working-directory: server
+        run: npm run test:unit
+
+      - name: Install Frontend Dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Run Frontend Linter
+        working-directory: client
+        run: npm run lint
+
+      - name: Run Frontend Production Build
+        working-directory: client
+        run: npm run build

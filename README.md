@@ -2,7 +2,7 @@
 
 [![Status](https://img.shields.io/badge/Status-Fully%20Integrated%20%26%20Verified-success)](#development-roadmap)
 [![Stack](https://img.shields.io/badge/Stack-MERN%20(React%20%2B%20Express%20%2B%20MongoDB)-blue)](#technology-stack)
-[![Tests](https://img.shields.io/badge/Tests-48%2F48%20Passing-brightgreen)](#automated-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-55%2F55%20Passing-brightgreen)](#automated-testing--qa)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
@@ -187,7 +187,7 @@ Create `server/.env`:
 PORT=5000
 NODE_ENV=development
 MONGODB_URI=mongodb://127.0.0.1:27017/nestmatch
-JWT_SECRET=supersecret_fsd_nestmatch_key_2026
+JWT_SECRET=your_secure_development_jwt_secret_min_32_characters
 CLIENT_URL=http://localhost:5173
 ```
 Seed the database with verified students and admin:
@@ -222,36 +222,40 @@ Open `http://localhost:5173` in your browser.
 
 ## 8. Automated Testing & QA
 
-Run the full automated test suite directly from the `server/` directory:
+Run the automated test suites directly from the `server/` directory:
 ```bash
 cd server
-npm test
+npm run test:unit    # Executes all 30 standalone Node.js unit tests (no DB required)
+node tests/verifyApi.js  # Executes all 25 end-to-end REST API integration tests (requires MongoDB)
 ```
-This single command executes:
-1. **Unit Test Suite** (`node --test tests/*.test.js` - **26 PASS**):
-   - JWT security: missing secret error, valid token sign/verify, invalid signature rejection, expired token rejection, malformed token rejection, startup validation
-   - Matching algorithm: identical preferences 100%, missing preferences handling, incomplete questionnaire partial evaluation, conflicting preferences, partial compatibility, budget distance penalties, self-match exclusion, score normalization [0, 100], dynamic preference updates
-   - Profile completeness: empty profile incomplete, populated profile complete, transition on clearing field, short bio check
-   - Request model: self-request hook rejection, deterministic activePairKey computation, nullification on rejection
-   - Seed safety guard: rejection in production, rejection without confirmation, rejection on unapproved DBs, execution on dev DB with confirmation
-2. **Integration Verification Suite** (`node tests/verifyApi.js` - **22 PASS**):
-   - Health and Database readiness verification
-   - Registration validation and duplicate account rejection
+
+### Test Suite Breakdown:
+1. **Unit Test Suite** (`npm run test:unit` — **30 / 30 PASS**):
+   - **JWT Security** (6 tests): missing secret error, valid token sign/verify, invalid signature rejection, expired token rejection, malformed token rejection, startup validation
+   - **Matching Algorithm** (9 tests): identical preferences 100%, missing preferences handling, incomplete questionnaire partial evaluation, conflicting preferences, partial compatibility, budget distance penalties, self-match exclusion, score normalization [0, 100], dynamic preference updates
+   - **Profile Completeness** (4 tests): empty profile incomplete, populated profile complete, transition on clearing field, short bio check
+   - **Request Model Integrity** (4 tests): self-request hook rejection, deterministic activePairKey computation, nullification on rejection, nullification on cancellation
+   - **Security Middleware** (3 tests): requireDB passes on connected DB, requireDB returns 503 on disconnected DB, sliding-window rate limiters permit normal and block excessive traffic
+   - **Seed Safety Guard** (4 tests): rejection in production, rejection without confirmation, rejection on unapproved DBs, execution on dev DB with confirmation
+2. **Integration Verification Suite** (`node tests/verifyApi.js` — **25 / 25 PASS**):
+   - Health and Database readiness verification (`/api/health`, `/api/ready`)
+   - Registration validation and successful account creation
    - Password hashing and authentication verification
    - Tokenless request 401 guard verification
-   - Profile update and persistence verification
-   - Preferences CRUD and questionnaire persistence
+   - Profile update and persistence verification (including age boundaries 16–99)
+   - Preferences CRUD and questionnaire persistence without fabricated defaults
    - Algorithmic compatibility calculation
    - Roommate request workflow (sent, received, status)
    - Conversation listing and message permissions
-   - Admin metrics and RBAC enforcement (student gets 403 Forbidden)
+   - Admin metrics and RBAC enforcement (student receives 403 Forbidden)
    - Admin search safe regex escaping (preventing ReDoS on special characters)
-   - Admin pagination limits (rejects negative page and excessive limit > 100)
+   - Admin pagination limits (rejects invalid page and excessive limit > 100)
    - Admin report status filter validation
    - Self-request prevention (400 Bad Request)
    - Duplicate active roommate request prevention (409 Conflict)
    - Request acceptance receiver authorization and idempotence
    - Profile completeness dynamic transitions (complete -> incomplete -> complete)
+   - User settings boolean validation and persistence to MongoDB
 
 ### Frontend Build & Lint Verification
 ```bash

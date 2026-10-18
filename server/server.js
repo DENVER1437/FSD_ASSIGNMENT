@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB, isDBConnected, disconnectDB } from './config/db.js';
+import { connectDB, isDBConnected, disconnectDB, validateDbConfig, sanitizeMongoUri } from './config/db.js';
 
 // Route handlers
 import authRoutes from './routes/authRoutes.js';
@@ -15,12 +15,14 @@ import adminRoutes from './routes/adminRoutes.js';
 // Middleware
 import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
 import { validateJwtConfig } from './utils/jwt.js';
+import { requireDB } from './middleware/requireDB.js';
 
 // Load environment variables
 dotenv.config();
 
 // Validate core configuration before handling requests
 validateJwtConfig();
+validateDbConfig();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -114,14 +116,14 @@ app.get('/api/ready', (req, res) => {
   }
 });
 
-// Mount Core Application Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/preferences', preferenceRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/admin', adminRoutes);
+// Mount Core Application Routes (Protected with database readiness verification)
+app.use('/api/auth', requireDB, authRoutes);
+app.use('/api/users', requireDB, userRoutes);
+app.use('/api/preferences', requireDB, preferenceRoutes);
+app.use('/api/matches', requireDB, matchRoutes);
+app.use('/api/requests', requireDB, requestRoutes);
+app.use('/api/messages', requireDB, messageRoutes);
+app.use('/api/admin', requireDB, adminRoutes);
 
 // 404 Catch-All & Centralized Error Middleware
 app.use(notFoundHandler);
@@ -141,7 +143,7 @@ const startServer = async () => {
       console.log(`[Readiness Probe] http://localhost:${PORT}/api/ready`);
     });
   } catch (error) {
-    console.error('[Startup Error]: Could not establish MongoDB connection.', error.message);
+    console.error('[Startup Error]: Could not establish MongoDB connection.', sanitizeMongoUri(error.message));
     // Allow server to run so health probes can diagnose, but log failure
     server = app.listen(PORT, () => {
       console.log(`[NestMatch Server] Running in DEGRADED mode on port ${PORT} (Database Offline)`);

@@ -1,12 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Home, Compass, ArrowLeft } from 'lucide-react';
 import Button from '../components/Button';
+import BrandLogo from '../components/BrandLogo';
 
 export function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-surface-warm flex flex-col items-center justify-center p-6 text-center">
+      <Link to="/" className="mb-8 group" aria-label="NestMatch Home">
+        <BrandLogo variant="horizontal" size="md" priority className="group-hover:opacity-90" />
+      </Link>
+
       <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center mb-6 border border-brand-200">
         <Compass className="w-8 h-8 animate-spin-slow" />
       </div>

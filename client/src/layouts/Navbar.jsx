@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Menu, X, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Menu, X, ArrowRight } from 'lucide-react';
 import Button from '../components/Button';
+import BrandLogo from '../components/BrandLogo';
 import { useAuth } from '../context/AuthContext';
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -14,18 +15,12 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm group-hover:bg-brand-700 transition">
-              <Home className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-xl font-extrabold tracking-tight text-charcoal">
-                Nest<span className="text-brand-600">Match</span>
-              </span>
-              <span className="block text-[10px] uppercase font-bold tracking-widest text-stone-400 -mt-1">
-                Student Housing
-              </span>
-            </div>
+          <Link
+            to={isAuthenticated ? '/dashboard' : '/'}
+            className="flex items-center py-1 group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 rounded-lg"
+            aria-label="NestMatch — Home"
+          >
+            <BrandLogo variant="horizontal" size="md" priority className="group-hover:opacity-90" />
           </Link>
 
           {/* Desktop Nav Links */}

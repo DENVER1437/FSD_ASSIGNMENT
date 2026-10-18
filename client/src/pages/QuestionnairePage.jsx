@@ -7,6 +7,7 @@ import {
   Check,
   RotateCcw,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -15,7 +16,7 @@ import { useMatch } from '../context/MatchContext';
 import { useToast } from '../context/ToastContext';
 
 export function QuestionnairePage() {
-  const { preferences, submitQuestionnaire } = useMatch();
+  const { preferences, preferencesLoading, submitQuestionnaire } = useMatch();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -410,6 +411,15 @@ export function QuestionnairePage() {
             Review Answers
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (preferencesLoading && !preferences) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-150 py-20 text-center">
+        <Loader2 className="w-10 h-10 text-brand-600 animate-spin mx-auto" />
+        <p className="text-sm font-medium text-stone-600">Loading your saved lifestyle questionnaire answers...</p>
       </div>
     );
   }

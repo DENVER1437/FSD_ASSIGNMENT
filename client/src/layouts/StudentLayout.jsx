@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  Home,
   LayoutDashboard,
   User,
   ClipboardList,
@@ -17,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useMatch } from '../context/MatchContext';
 import Avatar from '../components/Avatar';
+import BrandLogo from '../components/BrandLogo';
 
 export function StudentLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -54,19 +54,9 @@ export function StudentLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-stone-200/90 shrink-0 sticky top-0 h-screen z-30">
         {/* Brand */}
-        <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-          <NavLink to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm">
-              <Home className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-lg font-extrabold tracking-tight text-charcoal">
-                Nest<span className="text-brand-600">Match</span>
-              </span>
-              <span className="block text-[9px] uppercase font-bold tracking-widest text-stone-400">
-                Student App
-              </span>
-            </div>
+        <div className="p-5 border-b border-stone-100 flex items-center justify-between">
+          <NavLink to="/dashboard" className="flex items-center group py-0.5" aria-label="NestMatch Dashboard">
+            <BrandLogo variant="horizontal" size="md" priority className="group-hover:opacity-90" />
           </NavLink>
         </div>
 
@@ -149,11 +139,8 @@ export function StudentLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Top Bar */}
         <header className="md:hidden sticky top-0 z-30 bg-white border-b border-stone-200 px-4 h-16 flex items-center justify-between">
-          <NavLink to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white">
-              <Home className="w-4 h-4" />
-            </div>
-            <span className="text-base font-bold text-charcoal">NestMatch</span>
+          <NavLink to="/dashboard" className="flex items-center" aria-label="NestMatch Dashboard">
+            <BrandLogo variant="horizontal" size="sm" priority />
           </NavLink>
 
           <div className="flex items-center gap-2">

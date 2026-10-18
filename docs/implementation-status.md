@@ -27,10 +27,10 @@ This document certifies the comprehensive audit, repair, integration, security h
 12. **Settings Real Persistence**: Implemented `PUT /api/users/settings` with strict boolean validation. Persisted notification and privacy settings to authenticated user records, wired toggles with optimistic state and automatic rollback on failure, and explicitly disabled upcoming v2.0 features with honest explanatory labels.
 13. **Error vs Empty State Granularity**: Added explicit `matchesLoading`, `matchesError`, `requestsLoading`, and `requestsError` to separate loading, legitimate empty data, and network/server failures across all data-driven views. Added retry buttons. Replaced eager conversation message fetching with on-demand retrieval (`fetchMessagesForUser`). Removed fake "online" presence claims in chat.
 14. **Automated Verification**:
-    - `node --test tests/*.test.js`: **26 / 26 PASS** (JWT security, matching accuracy, profile completeness, request model concurrency, seed safety guard).
-    - `node tests/verifyApi.js`: **25 / 25 PASS** (Full end-to-end REST API verification suite including age boundaries, unrecorded null preferences, and settings persistence).
-    - `npm run build` (client): **Vite build PASS** (Zero errors).
-    - `npm run lint` (client): **Oxlint PASS** (Zero errors).
+    - `npm run test:unit`: **30 / 30 PASS** (JWT security, matching accuracy, profile completeness, request model concurrency & cancellation, seed safety guard, database connectivity middleware, sliding-window rate limiters).
+    - `node tests/verifyApi.js`: **25 / 25 PASS** (Full end-to-end REST API verification suite including age boundaries, unrecorded null preferences, and settings persistence against live MongoDB).
+    - `npm run build` (client): **Vite build PASS** (Zero errors, optimized production chunks).
+    - `npm run lint` (client): **Oxlint PASS** (Zero warnings, zero errors across 64 files).
 
 ---
 
@@ -91,7 +91,7 @@ This document certifies the comprehensive audit, repair, integration, security h
 
 ## 4. Testing & Verification Summary
 
-### Unit Tests (26 / 26 PASS via `node --test tests/*.test.js`)
+### Unit Tests (30 / 30 PASS via `npm run test:unit`)
 - `tests/jwt.test.js`:
   - Missing secret throws explicit error (PASS)
   - Signs and verifies valid token (PASS)
@@ -118,6 +118,11 @@ This document certifies the comprehensive audit, repair, integration, security h
   - Pre-validate hook rejects self-request (PASS)
   - Computes deterministic activePairKey for pending/accepted requests (PASS)
   - Sets activePairKey to null on rejection to release uniqueness (PASS)
+  - Sets activePairKey to null on cancellation to release uniqueness (PASS)
+- `tests/securityMiddleware.test.js`:
+  - requireDB passes when DB is connected (PASS)
+  - requireDB returns 503 when DB is offline (PASS)
+  - Sliding-window rate limiter permits requests within budget and blocks excess (PASS)
 - `tests/seedGuard.test.js`:
   - Rejects execution in production (PASS)
   - Rejects execution without explicit confirmation (PASS)
@@ -170,3 +175,18 @@ This document certifies the comprehensive audit, repair, integration, security h
 3. **Database (MongoDB Atlas)**:
    - Standard SRV connection string supported via `MONGODB_URI`.
    - Indexes (`activePairKey` partial unique, `{ receiverId: 1, isRead: 1 }`) automatically ensured on startup.
+
+---
+
+## 6. Security Audit & Secret Scanning Remediation
+
+- **Incident**: GitHub Secret Scanning flagged `server/tests/seedGuard.test.js:34` due to synthetic dummy Atlas URI regex pattern match.
+- **Source Remediation**:
+  - Replaced dummy credentialed URI in `seedGuard.test.js` with safe RFC 2606 fixture (`mongodb://unapproved-remote.example.internal:27017/remote_data`).
+  - Hardened `canRunDestructiveSeed()` in `server/scripts/seed.js` to reject remote Atlas clusters (`mongodb+srv://`, `.mongodb.net`) and validate database targets.
+  - Removed automated bypass flag (`--confirm`) from `server/package.json` `seed:reset` script.
+  - Added credential sanitization `sanitizeMongoUri()` in `server/config/db.js` and startup validation `validateDbConfig()`.
+  - Hardened `.gitignore` (root, server, client) to block all `.env` variants and private key formats while preserving `.env.example`.
+  - Created security regression test suite `server/tests/securityRemediation.test.js` (9/9 pass, 42/42 unit tests total).
+  - Added repository secret scanner script `scripts/scan-secrets.js` and GitHub Actions CI workflow `.github/workflows/security-scan.yml`.
+

@@ -1,6 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  ShieldAlert,
   Users,
   AlertTriangle,
   LayoutDashboard,
@@ -9,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
+import BrandLogo from '../components/BrandLogo';
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -62,10 +62,8 @@ export function AdminLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-6">
-              <NavLink to="/admin" className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-charcoal flex items-center justify-center text-white">
-                  <ShieldAlert className="w-4 h-4 text-emerald-400" />
-                </div>
+              <NavLink to="/admin" className="flex items-center gap-2.5" aria-label="NestMatch Admin Overview">
+                <BrandLogo variant="icon" size="sm" priority />
                 <span className="text-base font-extrabold text-charcoal">
                   NestMatch <span className="text-xs uppercase font-bold text-stone-400 ml-1">Admin</span>
                 </span>

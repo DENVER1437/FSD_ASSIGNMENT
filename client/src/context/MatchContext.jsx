@@ -321,6 +321,7 @@ export function MatchProvider({ children }) {
         preferencesError,
         loading,
         fetchMatches,
+        refreshMatches: fetchMatches,
         fetchRequests,
         fetchConversations,
         fetchMessagesForUser,

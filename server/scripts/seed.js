@@ -8,7 +8,8 @@ dotenv.config();
 
 /**
  * Validates whether destructive seeding is permitted.
- * Blocks production execution and requires explicit confirmation.
+ * Blocks production execution, blocks remote cloud clusters, requires explicit confirmation,
+ * and verifies that the database target is an approved local development/test database.
  */
 export const canRunDestructiveSeed = ({
   nodeEnv = process.env.NODE_ENV,
@@ -36,18 +37,44 @@ export const canRunDestructiveSeed = ({
   }
 
   // 3. Database URI validation: Ensure it targets a local/test/dev database
-  const normalizedUri = (mongoUri || '').toLowerCase();
-  const isApprovedTarget =
-    normalizedUri.includes('localhost') ||
-    normalizedUri.includes('127.0.0.1') ||
-    normalizedUri.includes('test') ||
-    normalizedUri.includes('dev') ||
-    normalizedUri.includes('nestmatch');
+  const normalizedUri = (mongoUri || '').trim().toLowerCase();
+  if (!normalizedUri) {
+    return {
+      allowed: false,
+      reason: 'SAFETY GUARD: Target database connection string is empty or unidentified.',
+    };
+  }
 
-  if (!isApprovedTarget) {
+  // Reject remote cloud clusters (e.g. MongoDB Atlas) by default for destructive operations
+  const isRemoteCluster = normalizedUri.startsWith('mongodb+srv://') || normalizedUri.includes('.mongodb.net');
+  if (isRemoteCluster) {
     return {
       allowed: false,
       reason: 'SAFETY GUARD: Target database connection does not identify an approved local/development/test database.',
+    };
+  }
+
+  const isLocalHost =
+    normalizedUri.includes('localhost') ||
+    normalizedUri.includes('127.0.0.1') ||
+    normalizedUri.includes('::1');
+
+  if (!isLocalHost) {
+    return {
+      allowed: false,
+      reason: 'SAFETY GUARD: Target database connection does not identify an approved local/development/test database.',
+    };
+  }
+
+  // Extract and validate database name
+  const dbNameMatch = normalizedUri.match(/\/([^/?#]+)(\?|$)/);
+  const dbName = dbNameMatch ? dbNameMatch[1] : '';
+  const approvedDbs = ['nestmatch', 'nestmatch_dev', 'nestmatch_test', 'test'];
+
+  if (!dbName || !approvedDbs.includes(dbName)) {
+    return {
+      allowed: false,
+      reason: `SAFETY GUARD: Target database connection does not identify an approved local/development/test database. Target '${dbName || 'unidentified'}' is not in approved list (${approvedDbs.join(', ')}).`,
     };
   }
 
@@ -56,33 +83,56 @@ export const canRunDestructiveSeed = ({
 
 const seedDatabase = async () => {
   try {
-    const guard = canRunDestructiveSeed();
-    if (!guard.allowed) {
-      console.error(`\n[Seed Aborted]: ${guard.reason}`);
-      console.error('Safe Usage (Development Only):');
-      console.error('  CONFIRM_SEED_RESET=true node scripts/seed.js');
-      console.error('  or: npm run seed -- --confirm\n');
+    const cliArgs = process.argv.slice(2);
+    const isResetRequested = cliArgs.includes('--reset') || cliArgs.includes('--destructive');
+    const isConfirm =
+      cliArgs.includes('--confirm') ||
+      cliArgs.includes('--force') ||
+      process.env.CONFIRM_SEED_RESET === 'true';
+
+    // 1. Refuse in production
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        '\n[Seed Aborted]: CRITICAL SAFETY BLOCK: Database seeding is strictly forbidden when NODE_ENV is set to "production".'
+      );
       process.exit(1);
     }
 
-    await connectDB();
-    console.log('[Seed] Connected to authorized development database. Proceeding with demo seed...');
+    // 2. Destructive reset safety gate
+    let isDestructive = false;
+    if (isResetRequested || isConfirm) {
+      const guard = canRunDestructiveSeed({ cliArgs });
+      if (!guard.allowed) {
+        console.error(`\n[Seed Aborted]: ${guard.reason}`);
+        console.error('Safe Usage (Development Only):');
+        console.error('  Idempotent Demo Data Seed (Non-Destructive): npm run seed (or node scripts/seed.js --upsert)');
+        console.error('  Deliberate Full Reset:                      CONFIRM_SEED_RESET=true npm run seed:reset (or node scripts/seed.js --reset --confirm)\n');
+        process.exit(1);
+      }
+      isDestructive = true;
+    }
 
-    // Clear collections
-    await Promise.all([
-      User.deleteMany({}),
-      Preference.deleteMany({}),
-      Request.deleteMany({}),
-      Message.deleteMany({}),
-      Report.deleteMany({}),
-    ]);
+    await connectDB();
+
+    if (isDestructive) {
+      console.log('[Seed] Confirmed destructive reset requested. Clearing development collections...');
+      await Promise.all([
+        User.deleteMany({}),
+        Preference.deleteMany({}),
+        Request.deleteMany({}),
+        Message.deleteMany({}),
+        Report.deleteMany({}),
+      ]);
+    } else {
+      console.log('[Seed] Idempotent upsert mode active. Preserving existing student accounts and upserting demo data...');
+    }
 
     const defaultPassword = 'Password123!';
     const adminPassword = 'AdminSecret123!';
 
-    // 1. Create Users
-    console.log('[Seed] Creating demo users...');
-    const users = await User.create([
+    // 1. Prepare demo users data
+    console.log('[Seed] Processing demo users...');
+    const demoUsersData = [
       {
         name: 'Alex Johnson',
         email: 'alex@university.edu',
@@ -175,13 +225,38 @@ const seedDatabase = async () => {
         status: 'active',
         isProfileComplete: true,
       },
-    ]);
+    ];
+
+    const users = [];
+    for (const userData of demoUsersData) {
+      if (isConfirm) {
+        const u = await User.create(userData);
+        users.push(u);
+      } else {
+        let u = await User.findOne({ email: userData.email });
+        if (u) {
+          u.name = userData.name;
+          u.college = userData.college;
+          u.city = userData.city;
+          u.course = userData.course;
+          u.bio = userData.bio;
+          u.profileImage = userData.profileImage;
+          u.role = userData.role;
+          u.status = userData.status;
+          u.isProfileComplete = userData.isProfileComplete;
+          await u.save();
+        } else {
+          u = await User.create(userData);
+        }
+        users.push(u);
+      }
+    }
 
     const [alex, jordan, priya, marcus, samira, liam] = users;
 
     // 2. Create Preferences
     console.log('[Seed] Seeding lifestyle preferences...');
-    await Preference.create([
+    const demoPreferences = [
       {
         userId: alex._id,
         budget: '5000-8000',
@@ -290,59 +365,111 @@ const seedDatabase = async () => {
         foodPreference: 'non_vegetarian',
         preferredLocation: 'South End',
       },
-    ]);
+    ];
+
+    for (const pref of demoPreferences) {
+      if (isConfirm) {
+        await Preference.create(pref);
+      } else {
+        await Preference.findOneAndUpdate(
+          { userId: pref.userId },
+          { $set: pref },
+          { upsert: true, new: true, runValidators: true }
+        );
+      }
+    }
 
     // 3. Create Seed Requests & Messages
     console.log('[Seed] Seeding roommate requests and message threads...');
-    // Connected pair: Alex <-> Jordan
-    const reqAccepted = await Request.create({
-      senderId: jordan._id,
-      receiverId: alex._id,
-      status: 'accepted',
-      message: 'Hey Alex! Our compatibility score is 94%. We have identical sleep and cleanliness routines. Let us team up for an apartment!',
-    });
-
-    // Seed conversation messages for Alex & Jordan
-    await Message.create([
+    const demoRequests = [
       {
         senderId: jordan._id,
         receiverId: alex._id,
+        status: 'accepted',
         message: 'Hey Alex! Our compatibility score is 94%. We have identical sleep and cleanliness routines. Let us team up for an apartment!',
-        isRead: true,
+      },
+      {
+        senderId: priya._id,
+        receiverId: alex._id,
+        status: 'pending',
+        message: 'Hi Alex! Saw your profile. We both prioritize silent study and keeping a clean kitchen.',
       },
       {
         senderId: alex._id,
-        receiverId: jordan._id,
-        message: 'Hey Jordan! That sounds awesome. I saw the 2BHK listings near Commonwealth Ave.',
-        isRead: true,
+        receiverId: marcus._id,
+        status: 'pending',
+        message: 'Hi Marcus! Love your architecture projects. Wondering if you would like to look for places near campus?',
       },
-      {
-        senderId: jordan._id,
-        receiverId: alex._id,
-        message: 'Perfect! When are you free this week to do a quick tour?',
-        isRead: true,
-      },
-    ]);
+    ];
 
-    // Pending incoming request: Priya -> Alex
-    await Request.create({
-      senderId: priya._id,
-      receiverId: alex._id,
-      status: 'pending',
-      message: 'Hi Alex! Saw your profile. We both prioritize silent study and keeping a clean kitchen.',
-    });
+    for (const reqData of demoRequests) {
+      const activePairKey = [reqData.senderId.toString(), reqData.receiverId.toString()].sort().join(':');
+      if (isConfirm) {
+        await Request.create({ ...reqData, activePairKey });
+      } else {
+        const existing = await Request.findOne({
+          $or: [
+            { senderId: reqData.senderId, receiverId: reqData.receiverId },
+            { senderId: reqData.receiverId, receiverId: reqData.senderId },
+          ],
+        });
+        if (!existing) {
+          await Request.create({ ...reqData, activePairKey });
+        }
+      }
+    }
 
-    // Pending outgoing request: Alex -> Marcus
-    await Request.create({
-      senderId: alex._id,
-      receiverId: marcus._id,
-      status: 'pending',
-      message: 'Hi Marcus! Love your architecture projects. Wondering if you would like to look for places near campus?',
-    });
+    // Seed conversation messages for Alex & Jordan
+    if (isConfirm) {
+      await Message.create([
+        {
+          senderId: jordan._id,
+          receiverId: alex._id,
+          message: 'Hey Alex! Our compatibility score is 94%. We have identical sleep and cleanliness routines. Let us team up for an apartment!',
+          isRead: true,
+        },
+        {
+          senderId: alex._id,
+          receiverId: jordan._id,
+          message: 'Hey Jordan! That sounds awesome. I saw the 2BHK listings near Commonwealth Ave.',
+          isRead: true,
+        },
+        {
+          senderId: jordan._id,
+          receiverId: alex._id,
+          message: 'Perfect! When are you free this week to do a quick tour?',
+          isRead: true,
+        },
+      ]);
+    } else {
+      const existingMsg = await Message.findOne({ senderId: jordan._id, receiverId: alex._id });
+      if (!existingMsg) {
+        await Message.create([
+          {
+            senderId: jordan._id,
+            receiverId: alex._id,
+            message: 'Hey Alex! Our compatibility score is 94%. We have identical sleep and cleanliness routines. Let us team up for an apartment!',
+            isRead: true,
+          },
+          {
+            senderId: alex._id,
+            receiverId: jordan._id,
+            message: 'Hey Jordan! That sounds awesome. I saw the 2BHK listings near Commonwealth Ave.',
+            isRead: true,
+          },
+          {
+            senderId: jordan._id,
+            receiverId: alex._id,
+            message: 'Perfect! When are you free this week to do a quick tour?',
+            isRead: true,
+          },
+        ]);
+      }
+    }
 
     // 4. Create Seed Moderation Reports for Admin view
     console.log('[Seed] Seeding safety moderation reports...');
-    await Report.create([
+    const demoReports = [
       {
         reporterId: priya._id,
         reportedUserId: liam._id,
@@ -359,9 +486,20 @@ const seedDatabase = async () => {
         severity: 'high',
         status: 'investigating',
       },
-    ]);
+    ];
 
-    console.log('[Seed] Database successfully seeded with demo accounts!');
+    for (const repData of demoReports) {
+      if (isConfirm) {
+        await Report.create(repData);
+      } else {
+        const existingRep = await Report.findOne({ reporterId: repData.reporterId, reportedUserId: repData.reportedUserId });
+        if (!existingRep) {
+          await Report.create(repData);
+        }
+      }
+    }
+
+    console.log('[Seed] Database successfully synchronized with demo accounts!');
     console.log('---------------------------------------------------------');
     console.log('Demo Student: alex@university.edu / Password123!');
     console.log('Demo Admin:   admin@nestmatch.edu / AdminSecret123!');
@@ -371,6 +509,7 @@ const seedDatabase = async () => {
     process.exit(0);
   } catch (error) {
     console.error('[Seed Error]:', error);
+    process.exit(1);
   }
 };
 

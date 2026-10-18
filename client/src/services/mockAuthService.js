@@ -7,7 +7,7 @@ import { MOCK_CURRENT_USER, MOCK_ADMIN_USER } from '../data/mockUsers';
  */
 
 export const mockAuthService = {
-  login: async (email, password) => {
+  login: async (email, _password) => {
     // Check if logging in as demo admin
     if (email === 'admin@nestmatch.internal') {
       return { success: true, user: MOCK_ADMIN_USER, role: 'admin' };

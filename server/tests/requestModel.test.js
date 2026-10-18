@@ -63,3 +63,17 @@ test('Request Model - Sets activePairKey to null when status is rejected to rele
   // Must be null so partial unique index ignores it
   assert.equal(reqRejected.activePairKey, null);
 });
+
+test('Request Model - Sets activePairKey to null when status is cancelled to release uniqueness', async () => {
+  const userA = new mongoose.Types.ObjectId('67b3f1a2b3c4d5e6f7a8b9c1');
+  const userB = new mongoose.Types.ObjectId('67b3f1a2b3c4d5e6f7a8b9c2');
+
+  const reqCancelled = new Request({
+    senderId: userA,
+    receiverId: userB,
+    status: 'cancelled',
+  });
+  await reqCancelled.validate();
+
+  assert.equal(reqCancelled.activePairKey, null);
+});

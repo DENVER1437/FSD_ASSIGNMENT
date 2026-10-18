@@ -111,7 +111,7 @@ export const getConversations = asyncHandler(async (req, res) => {
         college: otherUser.college,
         course: otherUser.course,
         profileImage: otherUser.profileImage,
-        status: 'online',
+        status: otherUser.status || 'active',
       },
       lastMessage: lastMessage ? lastMessage.message : 'Connection accepted. Say hello!',
       lastMessageTime: lastMessage

@@ -26,16 +26,15 @@ export function DashboardPage() {
   // Top 3 Recommended Matches
   const topMatches = matches.slice(0, 3);
 
-  // Dynamic profile completeness calculation
+  // Dynamic profile completeness calculation matching backend userController criteria
   const calculateCompletion = () => {
-    let score = 20; // baseline for registered account
-    if (user?.name) score += 15;
-    if (user?.college) score += 15;
-    if (user?.course) score += 10;
-    if (user?.bio && user.bio.trim().length > 10) score += 20;
-    if (user?.gender) score += 10;
-    if (user?.profileImage) score += 10;
-    return Math.min(100, score);
+    let score = 0;
+    if (user?.name && user.name.trim().length >= 2) score += 20;
+    if (user?.college && user.college.trim().length >= 2) score += 20;
+    if (user?.course && user.course.trim().length >= 2) score += 20;
+    if (user?.city && user.city.trim().length >= 2) score += 20;
+    if (user?.bio && user.bio.trim().length >= 10) score += 20;
+    return score;
   };
   const profileCompletion = calculateCompletion();
 
@@ -80,7 +79,9 @@ export function DashboardPage() {
               </span>
             </div>
             <p className="text-xs text-stone-500">
-              Add your preferred move-in date and room amenities to unlock 100% precision.
+              {profileCompletion === 100
+                ? 'Your student profile is 100% complete and fully verified for matching.'
+                : 'Complete your college, course, city, and a short bio to reach 100% profile completeness.'}
             </p>
           </div>
           <Button

@@ -41,18 +41,18 @@ export function ProfilePage() {
     city: user?.city || '',
     age: user?.age !== undefined && user?.age !== null ? user.age : '',
     bio: user?.bio || '',
-    // Preferences
-    budget: preferences?.budget || '5000-8000',
-    sleepSchedule: preferences?.sleepSchedule || 'night_owl',
-    wakeUpSchedule: preferences?.wakeUpSchedule || 'after_9am',
-    cleanliness: preferences?.cleanliness || 'meticulous',
-    foodPreference: preferences?.foodPreference || 'vegetarian',
-    noisePreference: preferences?.noisePreference || 'silent',
-    studyHabit: preferences?.studyHabit || 'in_room_quiet',
-    socialLevel: preferences?.socialLevel || 'ambivert',
-    smokingPreference: preferences?.smokingPreference || 'strictly_non_smoker',
-    guestPreference: preferences?.guestPreference || 'occasional_guests',
-    preferredLocation: preferences?.preferredLocation || 'Downtown / University District',
+    // Preferences - explicit unanswered empty string when not yet recorded
+    budget: preferences?.budget || '',
+    sleepSchedule: preferences?.sleepSchedule || '',
+    wakeUpSchedule: preferences?.wakeUpSchedule || '',
+    cleanliness: preferences?.cleanliness || '',
+    foodPreference: preferences?.foodPreference || '',
+    noisePreference: preferences?.noisePreference || '',
+    studyHabit: preferences?.studyHabit || '',
+    socialLevel: preferences?.socialLevel || '',
+    smokingPreference: preferences?.smokingPreference || '',
+    guestPreference: preferences?.guestPreference || '',
+    preferredLocation: preferences?.preferredLocation || '',
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
@@ -99,19 +99,41 @@ export function ProfilePage() {
         bio: formData.bio.trim(),
       };
 
-      const prefUpdates = {
-        budget: formData.budget,
-        sleepSchedule: formData.sleepSchedule,
-        wakeUpSchedule: formData.wakeUpSchedule,
-        cleanliness: formData.cleanliness,
-        foodPreference: formData.foodPreference,
-        noisePreference: formData.noisePreference,
-        studyHabit: formData.studyHabit,
-        socialLevel: formData.socialLevel,
-        smokingPreference: formData.smokingPreference,
-        guestPreference: formData.guestPreference,
-        preferredLocation: formData.preferredLocation,
-      };
+      const prefFields = [
+        'budget',
+        'sleepSchedule',
+        'wakeUpSchedule',
+        'cleanliness',
+        'foodPreference',
+        'noisePreference',
+        'studyHabit',
+        'socialLevel',
+        'smokingPreference',
+        'guestPreference',
+        'preferredLocation',
+      ];
+
+      const prefUpdates = {};
+      prefFields.forEach((f) => {
+        if (formData[f] && formData[f].trim() !== '') {
+          prefUpdates[f] = formData[f];
+        }
+      });
+
+      const hasExistingPrefs = Boolean(preferences && Object.keys(preferences).length > 0);
+      const shouldUpdatePrefs = hasExistingPrefs || Object.keys(prefUpdates).length > 0;
+
+      if (!shouldUpdatePrefs) {
+        // Only update personal details without fabricating questionnaire answers
+        const userRes = await userService.updateMyProfile(userUpdates);
+        if (userRes.data?.user) {
+          updateUser(userRes.data.user);
+        }
+        setIsDirty(false);
+        setIsEditing(false);
+        showToast('Profile updated successfully!', 'success');
+        return;
+      }
 
       // Safely perform coordinated updates with explicit partial-success handling
       const [userResult, prefResult] = await Promise.allSettled([
@@ -334,6 +356,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Under $5,000 / mo', value: '<5000' },
                 { label: '$5,000 – $8,000 / mo', value: '5000-8000' },
                 { label: '$8,000 – $12,000 / mo', value: '8000-12000' },
@@ -348,6 +371,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Night Owl (Past midnight)', value: 'night_owl' },
                 { label: 'Early Bird (Before 11 PM)', value: 'early_bird' },
                 { label: 'Flexible / Variable', value: 'flexible' },
@@ -361,6 +385,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Before 7:00 AM', value: 'before_7am' },
                 { label: '7:00 AM – 9:00 AM', value: '7am_9am' },
                 { label: 'After 9:00 AM', value: 'after_9am' },
@@ -374,6 +399,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Meticulous (Daily tidy, chore schedule)', value: 'meticulous' },
                 { label: 'Moderate (Tidy on weekends)', value: 'moderate' },
                 { label: 'Relaxed (Casual approach)', value: 'relaxed' },
@@ -387,6 +413,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Vegetarian Only', value: 'vegetarian' },
                 { label: 'Eggetarian', value: 'eggetarian' },
                 { label: 'Non-Vegetarian', value: 'non_vegetarian' },
@@ -401,6 +428,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Silent study environment', value: 'silent' },
                 { label: 'Moderate ambient sounds / TV', value: 'moderate' },
                 { label: 'Tolerant of music and chatter', value: 'tolerant' },
@@ -414,6 +442,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Introvert (Recharges in quiet)', value: 'introvert' },
                 { label: 'Ambivert (Balanced)', value: 'ambivert' },
                 { label: 'Extrovert (Loves group hangs)', value: 'extrovert' },
@@ -427,6 +456,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Strictly Non-Smoking Home', value: 'strictly_non_smoker' },
                 { label: 'Balcony / Outside only', value: 'outside_only' },
                 { label: 'Tolerant', value: 'tolerant' },
@@ -440,6 +470,7 @@ export function ProfilePage() {
               onChange={handleChange}
               disabled={!isEditing}
               options={[
+                { label: 'Not specified yet', value: '' },
                 { label: 'Occasional guests with heads-up', value: 'occasional_guests' },
                 { label: 'No overnight visitors', value: 'no_overnight_guests' },
                 { label: 'Frequent friends & open-house', value: 'open_house' },

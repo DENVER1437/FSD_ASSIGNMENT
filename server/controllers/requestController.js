@@ -238,12 +238,21 @@ export const rejectRequest = asyncHandler(async (req, res) => {
  * @access  Private (JWT)
  */
 export const cancelRequest = asyncHandler(async (req, res) => {
-  // Atomic delete: only pending request sent by this student can be cancelled
-  const request = await Request.findOneAndDelete({
-    _id: req.params.id,
-    senderId: req.user._id,
-    status: 'pending',
-  });
+  // Atomic transition: mark pending outgoing request as cancelled and clear activePairKey
+  const request = await Request.findOneAndUpdate(
+    {
+      _id: req.params.id,
+      senderId: req.user._id,
+      status: 'pending',
+    },
+    {
+      $set: {
+        status: 'cancelled',
+        activePairKey: null,
+      },
+    },
+    { new: true }
+  );
 
   if (!request) {
     const existing = await Request.findById(req.params.id);
@@ -256,8 +265,11 @@ export const cancelRequest = asyncHandler(async (req, res) => {
     if (existing.status === 'accepted') {
       return sendError(res, 'Cannot cancel an already accepted connection', 400);
     }
+    if (existing.status === 'cancelled') {
+      return sendError(res, 'Request is already cancelled', 400);
+    }
     return sendError(res, `Cannot cancel request with status '${existing.status}'`, 400);
   }
 
-  return sendSuccess(res, null, 'Roommate request canceled');
+  return sendSuccess(res, { request }, 'Roommate request canceled');
 });
