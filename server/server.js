@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB, isDBConnected, disconnectDB, validateDbConfig, sanitizeMongoUri } from './config/db.js';
+import { connectDB, isDBConnected, disconnectDB, validateDbConfig, sanitizeMongoUri, getDBStatus } from './config/db.js';
 
 // Route handlers
 import authRoutes from './routes/authRoutes.js';
@@ -40,6 +40,10 @@ const allowedOrigins = [
     'http://127.0.0.1:5173',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'http://localhost:5001',
+    'http://127.0.0.1:5001',
     ...clientUrls,
   ]),
 ];
@@ -47,7 +51,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, server-to-server curl, verification scripts)
+      // Allow requests with no origin (like mobile apps, server-to-server curl, verification scripts, Docker internal proxy)
       if (!origin) {
         return callback(null, true);
       }
@@ -62,6 +66,8 @@ app.use(
       }
       return callback(new Error(`Blocked by CORS policy: origin '${origin}' is not authorized.`));
     },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true,
   })
 );
@@ -92,25 +98,19 @@ app.get('/api/health', (req, res) => {
 
 // Readiness Probe (Verifies MongoDB Connectivity)
 app.get('/api/ready', (req, res) => {
-  const dbConnected = isDBConnected();
-  if (dbConnected) {
+  const dbStatus = getDBStatus();
+  if (dbStatus.connected) {
     return res.status(200).json({
       status: 'ready',
       success: true,
-      database: {
-        status: 'connected',
-        connected: true,
-      },
+      database: dbStatus,
       timestamp: new Date().toISOString(),
     });
   } else {
     return res.status(503).json({
       status: 'not_ready',
       success: false,
-      database: {
-        status: 'disconnected',
-        connected: false,
-      },
+      database: dbStatus,
       timestamp: new Date().toISOString(),
     });
   }
@@ -142,11 +142,28 @@ const startServer = async () => {
       console.log(`[Health Endpoint] http://localhost:${PORT}/api/health`);
       console.log(`[Readiness Probe] http://localhost:${PORT}/api/ready`);
     });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[FATAL PORT ERROR]: Port ${PORT} is already occupied by another process.`);
+        console.error(`To diagnose the occupying process on Windows, run: netstat -ano | findstr :${PORT}`);
+        console.error(`If running Docker simultaneously, ensure Docker backend host port is mapped to 5001 ("5001:5000") in docker-compose.yml so host port 5000 remains available for local development.`);
+        process.exit(1);
+      }
+    });
   } catch (error) {
     console.error('[Startup Error]: Could not establish MongoDB connection.', sanitizeMongoUri(error.message));
     // Allow server to run so health probes can diagnose, but log failure
     server = app.listen(PORT, () => {
       console.log(`[NestMatch Server] Running in DEGRADED mode on port ${PORT} (Database Offline)`);
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[FATAL PORT ERROR]: Port ${PORT} is already occupied by another process.`);
+        console.error(`To diagnose the occupying process on Windows, run: netstat -ano | findstr :${PORT}`);
+        process.exit(1);
+      }
     });
   }
 };

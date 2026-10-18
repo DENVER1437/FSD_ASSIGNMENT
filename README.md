@@ -346,7 +346,201 @@ npm run lint     # Validates static analysis with Oxlint
 
 ---
 
-## 12. Authors & Academic Credentials
+## 12. Docker Containerization & Local Compose Guide
+
+NestMatch features a production-grade multi-container Docker configuration with a hardened Node.js backend and an Nginx-driven React SPA frontend.
+
+### 12.1 Prerequisites & System Requirements
+- **Docker Desktop** (version 20.10+ or Docker Desktop 4+ for Windows/macOS/Linux)
+  - On Windows: Ensure **WSL 2 backend** is enabled in Docker Desktop settings.
+- **Docker Compose** (Compose v2+ integrated into Docker CLI via `docker compose`).
+- **Node.js** (v18.0.0+) and **npm** (v9.0.0+) for running local verification scripts and test suites.
+
+### 12.2 Port Mapping & Network Architecture
+
+The containerized stack runs on a dedicated Docker bridge network (`nestmatch-net`):
+
+| Service | Container Internal Port | Host Port | External Access URL | Internal Network DNS |
+|---|---|---|---|---|
+| **Frontend (Nginx)** | `80` | `8080` | `http://localhost:8080` | `frontend:80` |
+| **Backend (Express)** | `5000` | `5001` | `http://localhost:5001/api` | `backend:5000` |
+| **Database (Atlas)** | `27017` (TLS) | N/A (External Cloud) | External SRV DNS | Cloud Endpoint |
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                       HOST BROWSER                              │
+│       Frontend UI: http://localhost:8080                        │
+│       API Requests: http://localhost:8080/api                   │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ (Host Port 8080)
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 DOCKER SERVICE: frontend                        │
+│   (nginx:alpine runtime on container port 80)                   │
+│                                                                 │
+│   • Serves React SPA (try_files fallback to /index.html)        │
+│   • Reverse Proxies location /api to http://backend:5000        │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ (Internal bridge network: nestmatch-net)
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 DOCKER SERVICE: backend                         │
+│   (node:20-alpine unprivileged runtime on container port 5000)  │
+│                                                                 │
+│   • CORS allows origins: 8080, 5001, 5173, 3000                 │
+│   • REST Endpoints: /api/auth, /api/users, /api/matches, etc.   │
+│   • Health check: /api/health (200 OK)                          │
+│   • Readiness check: /api/ready (Checks MongoDB state)          │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │ (Outbound TLS 27017)
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     MONGODB ATLAS CLUSTER                       │
+│   (External Cloud Managed MongoDB over mongodb+srv://)          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+> **Why Host Port 5001 for Backend?**
+> Windows systems frequently reserve or occupy port 5000 with system services or local Node development servers. By mapping host port `5001 -> 5000`, NestMatch eliminates Windows socket binding conflicts while preserving the standard container port `5000` internally. Furthermore, since the Nginx frontend reverse-proxies `/api` internally to `http://backend:5000`, the browser seamlessly interacts with `http://localhost:8080/api` without needing direct backend host port access.
+
+### 12.3 Environment Variable Specification
+
+NestMatch separates frontend client-side variables from backend server secrets:
+
+#### A. Backend Variables (`server/.env`)
+| Variable | Required | Default / Example | Purpose |
+|---|---|---|---|
+| `PORT` | Yes | `5000` | Internal listening port for the Express application. |
+| `NODE_ENV` | Yes | `development` / `production` | Runtime mode controlling logging and error stacks. |
+| `MONGODB_URI` | Yes | Atlas SRV Connection String | Single standardized MongoDB connection URI. |
+| `JWT_SECRET` | Yes | 64-byte random hex string | Cryptographic secret for signing auth tokens (>= 32 chars). |
+| `JWT_EXPIRES_IN` | No | `7d` | Expiration lifetime for issued JWT access tokens. |
+| `CLIENT_URL` | Yes | Comma-separated list | Allowed CORS origins (e.g., `http://localhost:8080,http://localhost:5173`). |
+
+#### B. Frontend Variables (`client/.env`)
+| Variable | Required | Default / Example | Purpose |
+|---|---|---|---|
+| `VITE_API_URL` | Yes | `/api` (Docker) or `http://localhost:5000/api` (Local) | Base URL for Axios HTTP requests. Baked in at build time. |
+
+### 12.4 Local Development vs. Docker Environment
+
+| Aspect | Local Development Mode | Docker Compose Mode |
+|---|---|---|
+| **Frontend Server** | Vite Dev Server (`npm run dev`) on `http://localhost:5173` | Nginx SPA Server on `http://localhost:8080` |
+| **Backend Server** | Node.js process (`npm run dev`) on `http://localhost:5000` | `node:20-alpine` container on host `http://localhost:5001` |
+| **Frontend API Path** | `http://localhost:5000/api` (Direct cross-origin) | `/api` (Proxied by Nginx to `http://backend:5000`) |
+| **CORS Required** | Yes (`CLIENT_URL` must include `5173`) | Covered by Nginx proxy + explicit origins (`8080`) |
+| **Hot Reload** | Active (Vite HMR + Nodemon) | Production-bundled static assets and optimized code |
+
+### 12.5 MongoDB Atlas Configuration Guide
+
+To connect the application to your MongoDB Atlas cloud cluster:
+
+1. **Create Database User**:
+   - Navigate to [MongoDB Atlas Console](https://cloud.mongodb.com/) $\to$ **Security** $\to$ **Database Access**.
+   - Click **Add New Database User**.
+   - Authentication Method: **Password**. Choose a secure username and password (avoid unencoded special characters like `@` or `:`).
+   - Database User Privileges: Select **Built-in Role** $\to$ **Read and write to any database** (or restrict to `nestmatch`).
+
+2. **Configure Network Access (IP Whitelist)**:
+   - Navigate to **Security** $\to$ **Network Access**.
+   - Click **Add IP Address**.
+   - For local development and testing, click **Add Current IP Address** or use `0.0.0.0/0` (Allow Access from Anywhere) to permit connections from dynamic IP addresses and Docker containers.
+   - Wait for the entry status to transition to **Active**.
+
+3. **Retrieve Connection String**:
+   - Navigate to **Deployment** $\to$ **Database** $\to$ Click **Connect** on your cluster.
+   - Choose **Drivers** (Node.js).
+   - Copy the SRV connection template. Format:
+     `mongodb+srv://<username> : <password> @ <cluster-url>/nestmatch?retryWrites=true&w=majority`
+
+4. **Update `server/.env`**:
+   - Replace `<username>` and `<password>` with your database user credentials.
+   - Set the database name to `/nestmatch`.
+     ```env
+     # Substitute your real Atlas credentials (without spaces):
+     MONGODB_URI=mongodb+srv://<db-username> : <db-password> @ <cluster-address>/nestmatch?retryWrites=true&w=majority
+     ```
+
+### 12.6 Common MongoDB Connectivity Failures & Diagnostics
+
+The backend includes an automated connection diagnostic engine in `server/config/db.js` that classifies errors during startup and via the readiness probe:
+
+| Error Symptom / Code | Root Cause | Remediation Step |
+|---|---|---|
+| `ENOTFOUND` or `querySrv` | DNS Resolution Failure / Placeholder host | The hostname in `MONGODB_URI` does not exist. Replace placeholder text with your actual Atlas cluster address. |
+| `ETIMEDOUT` or `Server selection timed out` | Network / Firewall Timeout | MongoDB Atlas firewall is blocking the connection. Add your IP or `0.0.0.0/0` in Atlas **Network Access**. |
+| `bad auth` or `Authentication failed` | Invalid Credentials | Database username or password is incorrect. Verify credentials in Atlas **Database Access**. |
+| `TLS/SSL handshake error` | Blocked TLS / Port 27017 | Corporate VPN or firewall is blocking outbound TLS connections to port 27017. |
+| `Invalid scheme` | URI Syntax Error | Ensure the connection string starts with `mongodb+srv://` or `mongodb://`. |
+
+### 12.7 Docker Lifecycle Commands
+
+Execute all commands from the repository root:
+
+```bash
+# 1. Validate Docker Compose configuration
+docker compose config
+
+# 2. Build images and start containers in detached mode
+docker compose up --build -d
+
+# 3. Check status and health of running containers
+docker compose ps
+
+# 4. View real-time logs with timestamp tails
+docker compose logs --tail=100 -f backend
+docker compose logs --tail=100 -f frontend
+
+# 5. Restart backend after updating server/.env
+docker compose restart backend
+
+# 6. Stop and remove containers and networks (preserves image cache)
+docker compose down
+```
+
+### 12.8 Health & Readiness Inspection
+
+NestMatch provides distinct endpoints for process liveness and database readiness:
+
+- **Process Liveness**:
+  ```bash
+  curl -I http://localhost:5001/api/health
+  # Returns: HTTP/1.1 200 OK (Backend process is running and accepting HTTP requests)
+  ```
+- **Database Readiness**:
+  ```bash
+  curl -I http://localhost:5001/api/ready
+  # Returns: HTTP/1.1 200 OK (when MongoDB connection state is connected)
+  # Returns: HTTP/1.1 503 Service Unavailable (when MongoDB is disconnected or connecting, with diagnostic explanation)
+  ```
+- **Nginx Reverse Proxy Verification**:
+  ```bash
+  curl -I http://localhost:8080/api/health
+  # Returns: HTTP/1.1 200 OK (Confirms Nginx successfully proxies /api to backend container)
+  ```
+
+### 12.9 Git & Secret Hygiene Best Practices
+
+1. **Ignored Configuration Files**:
+   - `server/.env` and `client/.env` are strictly excluded in `.gitignore` and `.dockerignore`.
+   - Never commit `.env` files or hardcode credentials into source files.
+2. **Automated Secret Scanning**:
+   - Run the pre-commit secret scanner before pushing changes:
+     ```bash
+     node scripts/scan-secrets.js
+     ```
+   - Must return: `[PASS] Repository scan clean. Zero exposed secrets or tracked credential files detected.`
+3. **Credential Rotation Protocol**:
+   - If a database password or JWT secret was ever exposed in a public screenshot or commit, immediately rotate the password in MongoDB Atlas and generate a new JWT secret:
+     ```bash
+     node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+     ```
+   - Update `server/.env` and restart the backend container (`docker compose restart backend`).
+
+---
+
+## 13. Authors & Academic Credentials
 
 - **Student / Author**: Meet Kotecha
 - **Course**: Full Stack Development (FSD)
