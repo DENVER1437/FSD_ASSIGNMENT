@@ -1,28 +1,57 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
   ShieldAlert,
   Clock,
   AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Activity,
   UserCheck,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import PageHeader from '../components/PageHeader';
-import { mockAdminService } from '../services/mockAdminService';
+import { adminService } from '../services/adminService';
 
 export function AdminDashboardPage() {
   const navigate = useNavigate();
-  const stats = mockAdminService.getStats();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalStudents: 0,
+    completedSurveys: 0,
+    totalConnections: 0,
+    openReports: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadMetrics = async () => {
+      try {
+        const res = await adminService.getMetrics();
+        if (res.data?.metrics) {
+          setStats(res.data.metrics);
+        } else if (res.data) {
+          setStats({
+            totalUsers: res.data.totalUsers || 0,
+            totalStudents: res.data.totalStudents || 0,
+            completedSurveys: res.data.completedSurveys || 0,
+            totalConnections: res.data.totalConnections || 0,
+            openReports: res.data.openReports || 0,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load admin metrics:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadMetrics();
+  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
       <PageHeader
         title="Administrative Overview"
-        subtitle="Operational telemetry, student safety oversight, and platform activity."
+        subtitle="Live operational telemetry, student safety oversight, and platform metrics."
         badge={
           <span className="text-xs font-bold text-charcoal bg-stone-200 px-2.5 py-0.5 rounded-full">
             Admin Console
@@ -40,7 +69,9 @@ export function AdminDashboardPage() {
           <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-800 flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
-          <p className="text-2xl font-extrabold text-charcoal">{stats.totalUsers}</p>
+          <p className="text-2xl font-extrabold text-charcoal">
+            {loading ? '...' : stats.totalUsers || stats.totalStudents}
+          </p>
           <p className="text-xs font-medium text-stone-500">Registered Students</p>
         </Card>
 
@@ -52,16 +83,20 @@ export function AdminDashboardPage() {
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
             <UserCheck className="w-5 h-5" />
           </div>
-          <p className="text-2xl font-extrabold text-charcoal">{stats.activeUsers}</p>
-          <p className="text-xs font-medium text-stone-500">Active Profiles</p>
+          <p className="text-2xl font-extrabold text-charcoal">
+            {loading ? '...' : stats.completedSurveys}
+          </p>
+          <p className="text-xs font-medium text-stone-500">Completed Surveys</p>
         </Card>
 
         <Card className="p-5 space-y-2">
           <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
-          <p className="text-2xl font-extrabold text-charcoal">{stats.pendingRequests}</p>
-          <p className="text-xs font-medium text-stone-500">Active Invitations</p>
+          <p className="text-2xl font-extrabold text-charcoal">
+            {loading ? '...' : stats.totalConnections}
+          </p>
+          <p className="text-xs font-medium text-stone-500">Accepted Roommate Pairs</p>
         </Card>
 
         <Card
@@ -72,8 +107,10 @@ export function AdminDashboardPage() {
           <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5" />
           </div>
-          <p className="text-2xl font-extrabold text-charcoal">{stats.openReports}</p>
-          <p className="text-xs font-medium text-stone-500">Unresolved Reports</p>
+          <p className="text-2xl font-extrabold text-charcoal">
+            {loading ? '...' : stats.openReports}
+          </p>
+          <p className="text-xs font-medium text-stone-500">Open Reports</p>
         </Card>
       </div>
 

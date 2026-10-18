@@ -5,6 +5,7 @@
 export const notFoundHandler = (req, res, next) => {
   res.status(404).json({
     status: 'error',
+    success: false,
     message: `Cannot ${req.method} ${req.originalUrl} - Endpoint not found`,
   });
 };
@@ -48,15 +49,17 @@ export const errorHandler = (err, req, res, next) => {
     message = 'Authentication token has expired';
   }
 
-  // Log server errors internally
+  // Log server errors internally without exposing secrets
   if (statusCode >= 500) {
-    console.error('[Internal Server Error]:', err);
+    console.error('[Internal Server Error]:', err.message);
   }
 
   res.status(statusCode).json({
     status: 'error',
+    success: false,
     message,
     ...(errors.length > 0 && { errors }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
+

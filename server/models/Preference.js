@@ -33,7 +33,7 @@ const preferenceSchema = new mongoose.Schema(
     },
     choreSharing: {
       type: String,
-      enum: ['strict_rotation', 'as_needed', 'hire_help'],
+      enum: ['strict_rotation', 'as_needed', 'hire_help', 'clean_as_you_go', 'hire_cleaner', 'flexible_sharing'],
       default: 'strict_rotation',
     },
     roomComfort: {
@@ -44,17 +44,28 @@ const preferenceSchema = new mongoose.Schema(
     // Atmosphere & Study
     studyHabit: {
       type: String,
-      enum: ['in_room_quiet', 'in_room_collaborative', 'library_study'],
+      enum: ['in_room_quiet', 'in_room_collaborative', 'in_room_music', 'library_study', 'intense_study'],
       default: 'in_room_quiet',
     },
     noisePreference: {
       type: String,
-      enum: ['silent', 'moderate', 'lively'],
+      enum: ['silent', 'moderate', 'lively', 'tolerant', 'low', 'high'],
       default: 'moderate',
     },
     weekendRoutine: {
       type: String,
-      enum: ['relax_and_code', 'social_and_out', 'reading_and_study', 'outdoors', 'hybrid'],
+      enum: [
+        'relax_and_code',
+        'social_and_out',
+        'reading_and_study',
+        'outdoors',
+        'hybrid',
+        'gaming_and_relax',
+        'outdoor_sports',
+        'social_hangouts',
+        'parties_and_cooking',
+        'sports_and_trips',
+      ],
       default: 'relax_and_code',
     },
     // Social & House Rules

@@ -1,6 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 
+// Guards
+import ProtectedRoute from '../components/ProtectedRoute';
+import PublicRoute from '../components/PublicRoute';
+
 // Layouts
 import StudentLayout from '../layouts/StudentLayout';
 import AdminLayout from '../layouts/AdminLayout';
@@ -33,26 +37,34 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Pages */}
       <Route path={ROUTES.HOME} element={<LandingPage />} />
-      <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-      <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
 
-      {/* Student Protected Layout */}
-      <Route element={<StudentLayout />}>
-        <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
-        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
-        <Route path={ROUTES.QUESTIONNAIRE} element={<QuestionnairePage />} />
-        <Route path={ROUTES.MATCHES} element={<MatchesPage />} />
-        <Route path={ROUTES.MATCH_DETAILS} element={<MatchDetailsPage />} />
-        <Route path={ROUTES.REQUESTS} element={<RequestsPage />} />
-        <Route path={ROUTES.CHAT} element={<ChatPage />} />
-        <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
+      {/* Auth Pages (redirect if already logged in) */}
+      <Route element={<PublicRoute />}>
+        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+        <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       </Route>
 
-      {/* Admin Protected Layout */}
-      <Route element={<AdminLayout />}>
-        <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
-        <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
-        <Route path={ROUTES.ADMIN_REPORTS} element={<AdminReportsPage />} />
+      {/* Student Protected Layout */}
+      <Route element={<ProtectedRoute allowedRoles={['student', 'admin']} />}>
+        <Route element={<StudentLayout />}>
+          <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+          <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+          <Route path={ROUTES.QUESTIONNAIRE} element={<QuestionnairePage />} />
+          <Route path={ROUTES.MATCHES} element={<MatchesPage />} />
+          <Route path={ROUTES.MATCH_DETAILS} element={<MatchDetailsPage />} />
+          <Route path={ROUTES.REQUESTS} element={<RequestsPage />} />
+          <Route path={ROUTES.CHAT} element={<ChatPage />} />
+          <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
+        </Route>
+      </Route>
+
+      {/* Admin Protected Layout (Admin Only) */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route element={<AdminLayout />}>
+          <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
+          <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
+          <Route path={ROUTES.ADMIN_REPORTS} element={<AdminReportsPage />} />
+        </Route>
       </Route>
 
       {/* 404 Catch-All */}
@@ -60,3 +72,4 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+

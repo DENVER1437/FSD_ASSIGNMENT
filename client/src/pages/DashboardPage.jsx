@@ -1,20 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  Sparkles,
   Users,
   UserCheck,
   Clock,
   ArrowRight,
   ClipboardCheck,
   CheckCircle2,
-  AlertCircle,
   MessageSquare,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
 import ScoreBadge from '../components/ScoreBadge';
-import PageHeader from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
 import { useMatch } from '../context/MatchContext';
 
@@ -29,8 +26,18 @@ export function DashboardPage() {
   // Top 3 Recommended Matches
   const topMatches = matches.slice(0, 3);
 
-  // Profile completeness calculation
-  const profileCompletion = 85;
+  // Dynamic profile completeness calculation
+  const calculateCompletion = () => {
+    let score = 20; // baseline for registered account
+    if (user?.name) score += 15;
+    if (user?.college) score += 15;
+    if (user?.course) score += 10;
+    if (user?.bio && user.bio.trim().length > 10) score += 20;
+    if (user?.gender) score += 10;
+    if (user?.profileImage) score += 10;
+    return Math.min(100, score);
+  };
+  const profileCompletion = calculateCompletion();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
@@ -45,7 +52,7 @@ export function DashboardPage() {
             Welcome back, {user?.name?.split(' ')[0] || 'Student'}! 👋
           </h1>
           <p className="text-stone-500 text-sm max-w-xl">
-            You have <strong className="text-charcoal font-semibold">{pendingRequests.length} pending request</strong> and <strong className="text-charcoal font-semibold">{matches.length} compatible candidates</strong> matched to your lifestyle preferences.
+            You have <strong className="text-charcoal font-semibold">{pendingRequests.length} pending request{pendingRequests.length === 1 ? '' : 's'}</strong> and <strong className="text-charcoal font-semibold">{matches.length} compatible candidates</strong> matched to your lifestyle preferences.
           </p>
         </div>
 
@@ -294,11 +301,15 @@ export function DashboardPage() {
               </div>
               <div>
                 <h4 className="font-bold text-sm">Roommate Chat</h4>
-                <p className="text-[11px] text-stone-400">Connected conversations</p>
+                <p className="text-[11px] text-stone-400">
+                  {acceptedRequests.length > 0 ? `${acceptedRequests.length} Active Connection` : 'Connected conversations'}
+                </p>
               </div>
             </div>
             <p className="text-xs text-stone-300 mb-4 leading-relaxed">
-              You are connected with Marcus Taylor. Coordinate apartment visits and discuss lease splits directly.
+              {acceptedRequests.length > 0
+                ? `You have ${acceptedRequests.length} mutual connection. Coordinate apartment visits and discuss lease splits directly.`
+                : 'Send roommate requests to your top matches to unlock direct mutual messaging.'}
             </p>
             <Button
               size="sm"

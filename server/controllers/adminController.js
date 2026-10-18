@@ -12,9 +12,10 @@ import { sendSuccess, sendError } from '../utils/apiResponse.js';
  * @access  Private (Admin only)
  */
 export const getAdminDashboard = asyncHandler(async (req, res) => {
-  const [totalStudents, completedSurveys, totalConnections, openReports, recentReports] =
+  const [totalStudents, totalUsers, completedSurveys, totalConnections, openReports, recentReports] =
     await Promise.all([
       User.countDocuments({ role: 'student' }),
+      User.countDocuments(),
       Preference.countDocuments(),
       Request.countDocuments({ status: 'accepted' }),
       Report.countDocuments({ status: { $in: ['open', 'investigating'] } }),
@@ -28,7 +29,13 @@ export const getAdminDashboard = asyncHandler(async (req, res) => {
   return sendSuccess(
     res,
     {
+      totalUsers,
+      totalStudents,
+      completedSurveys,
+      totalConnections,
+      openReports,
       metrics: {
+        totalUsers,
         totalStudents,
         completedSurveys,
         totalConnections,

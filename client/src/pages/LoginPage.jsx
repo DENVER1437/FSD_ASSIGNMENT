@@ -16,7 +16,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, switchDemoRole } = useAuth();
+  const { login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -37,8 +37,8 @@ export function LoginPage() {
     try {
       const res = await login(email, password);
       if (res.success) {
-        showToast('Successfully signed in (Demo Session)!', 'success');
-        if (email === 'admin@nestmatch.internal') {
+        showToast('Successfully signed in!', 'success');
+        if (res.user?.role === 'admin') {
           navigate('/admin');
         } else {
           navigate('/dashboard');
@@ -46,7 +46,7 @@ export function LoginPage() {
       } else {
         setError(res.message || 'Login failed');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred during sign in.');
     } finally {
       setLoading(false);
@@ -55,15 +55,16 @@ export function LoginPage() {
 
   const handleQuickDemoFill = (type = 'student') => {
     if (type === 'student') {
-      setEmail('meet.patel@university.edu');
-      setPassword('DemoPass123!');
+      setEmail('alex@university.edu');
+      setPassword('Password123!');
       setError('');
     } else {
-      setEmail('admin@nestmatch.internal');
-      setPassword('AdminPass123!');
+      setEmail('admin@nestmatch.edu');
+      setPassword('AdminSecret123!');
       setError('');
     }
   };
+
 
   return (
     <div className="min-h-screen bg-surface-warm flex flex-col justify-center py-12 sm:px-6 lg:px-8">

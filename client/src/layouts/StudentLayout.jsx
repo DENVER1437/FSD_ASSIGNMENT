@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Home,
   LayoutDashboard,
@@ -13,20 +13,17 @@ import {
   Shield,
   Menu,
   X,
-  Bell,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMatch } from '../context/MatchContext';
 import Avatar from '../components/Avatar';
-import Badge from '../components/Badge';
 
 export function StudentLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, logout, switchDemoRole } = useAuth();
+  const { user, logout } = useAuth();
   const { requests } = useMatch();
+
   const navigate = useNavigate();
-  const location = useLocation();
 
   const pendingRequestsCount = requests.filter(
     (r) => r.type === 'received' && r.status === 'pending'
@@ -106,21 +103,20 @@ export function StudentLayout() {
           })}
         </div>
 
-        {/* Demo Role Switch & User Footer */}
+        {/* User Footer & Admin Link */}
         <div className="p-4 border-t border-stone-100 bg-stone-50/50 space-y-3">
-          <button
-            onClick={() => {
-              switchDemoRole('admin');
-              navigate('/admin');
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-stone-200 text-stone-700 hover:border-brand-300 hover:text-brand-700 transition"
-          >
-            <span className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-stone-400" />
-              Switch to Admin Demo
-            </span>
-            <span className="text-[10px] text-stone-400">→</span>
-          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-stone-200 text-stone-700 hover:border-brand-300 hover:text-brand-700 transition"
+            >
+              <span className="flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-brand-600" />
+                Admin Console
+              </span>
+              <span className="text-[10px] text-stone-400">→</span>
+            </button>
+          )}
 
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -161,15 +157,14 @@ export function StudentLayout() {
           </NavLink>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                switchDemoRole('admin');
-                navigate('/admin');
-              }}
-              className="text-[11px] font-semibold bg-stone-100 text-stone-700 px-2.5 py-1 rounded-lg border border-stone-200"
-            >
-              Admin View
-            </button>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => navigate('/admin')}
+                className="text-[11px] font-semibold bg-stone-100 text-stone-700 px-2.5 py-1 rounded-lg border border-stone-200"
+              >
+                Admin
+              </button>
+            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-stone-600 hover:bg-stone-100"
@@ -178,6 +173,7 @@ export function StudentLayout() {
             </button>
           </div>
         </header>
+
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (

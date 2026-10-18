@@ -10,20 +10,21 @@
   Authorization: Bearer <token>
   ```
 
-### Standard Error Response Structure
-```json
-{
-  "status": "error",
-  "message": "Human-readable error description",
-  "errors": [] // Optional validation details
-}
-```
-
 ### Standard Success Response Structure
 ```json
 {
-  "status": "success",
-  "data": {} // Payload object or array
+  "success": true,
+  "message": "Operation successful",
+  "data": {}
+}
+```
+
+### Standard Error Response Structure
+```json
+{
+  "success": false,
+  "message": "Human-readable error description",
+  "errors": []
 }
 ```
 
@@ -31,18 +32,43 @@
 
 ## 2. API Endpoints Specification
 
-### 2.1 System & Health
+### 2.1 System & Health Probes
 
 #### `GET /api/health`
-- **Description**: Verifies backend server health and phase status.
+- **Description**: Verifies backend server process health.
 - **Auth**: Public
 - **Response `200 OK`**:
   ```json
   {
-    "status": "success",
+    "status": "healthy",
     "project": "NestMatch – Smart Roommate Compatibility Finder",
-    "phase": "Phase 0 — Project Foundation",
-    "timestamp": "2026-10-13T16:50:00.000Z"
+    "timestamp": "2026-10-18T10:30:00.000Z"
+  }
+  ```
+
+#### `GET /api/ready`
+- **Description**: Database readiness probe verifying live MongoDB connectivity (`mongoose.connection.readyState === 1`).
+- **Auth**: Public
+- **Response `200 OK`**:
+  ```json
+  {
+    "status": "ready",
+    "database": {
+      "status": "connected",
+      "connected": true,
+      "host": "127.0.0.1",
+      "name": "nestmatch"
+    }
+  }
+  ```
+- **Response `503 Service Unavailable`** (When MongoDB disconnected):
+  ```json
+  {
+    "status": "not_ready",
+    "database": {
+      "status": "disconnected",
+      "connected": false
+    }
   }
   ```
 
@@ -51,7 +77,7 @@
 ### 2.2 Authentication (`/api/auth`)
 
 #### `POST /api/auth/register`
-- **Description**: Registers a new student account.
+- **Description**: Registers a new student account, hashes password via bcryptjs, and returns safe user profile and JWT.
 - **Auth**: Public
 - **Request Body**:
   ```json
@@ -67,19 +93,24 @@
 - **Response `201 Created`**:
   ```json
   {
-    "status": "success",
-    "token": "eyJhbGciOiJIUzI1NiIsIn...",
-    "user": {
-      "id": "64f1a2b3c4d5e6f7a8b9c0d1",
-      "name": "Alex Johnson",
-      "email": "alex@university.edu",
-      "role": "student"
+    "success": true,
+    "message": "Student registration successful",
+    "data": {
+      "user": {
+        "id": "67b3f1...",
+        "name": "Alex Johnson",
+        "email": "alex@university.edu",
+        "role": "student",
+        "college": "State Engineering University",
+        "city": "Boston"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsIn..."
     }
   }
   ```
 
 #### `POST /api/auth/login`
-- **Description**: Authenticates existing student/admin and returns JWT.
+- **Description**: Authenticates existing credentials and returns JWT.
 - **Auth**: Public
 - **Request Body**:
   ```json
@@ -91,218 +122,287 @@
 - **Response `200 OK`**:
   ```json
   {
-    "status": "success",
-    "token": "eyJhbGciOiJIUzI1NiIsIn...",
-    "user": {
-      "id": "64f1a2b3c4d5e6f7a8b9c0d1",
-      "name": "Alex Johnson",
-      "email": "alex@university.edu",
-      "role": "student"
+    "success": true,
+    "message": "Login successful",
+    "data": {
+      "user": {
+        "id": "67b3f1...",
+        "name": "Alex Johnson",
+        "email": "alex@university.edu",
+        "role": "student"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsIn..."
     }
   }
   ```
 
 #### `GET /api/auth/me`
-- **Description**: Fetches the currently authenticated session's user profile.
-- **Auth**: Private (`student` or `admin`)
+- **Description**: Returns authenticated session user profile.
+- **Auth**: Private (`protect`)
 - **Response `200 OK`**:
   ```json
   {
-    "status": "success",
-    "user": {
-      "id": "64f1a2b3c4d5e6f7a8b9c0d1",
-      "name": "Alex Johnson",
-      "email": "alex@university.edu",
-      "role": "student"
+    "success": true,
+    "data": {
+      "user": {
+        "id": "67b3f1...",
+        "name": "Alex Johnson",
+        "email": "alex@university.edu",
+        "role": "student"
+      }
     }
+  }
+  ```
+
+#### `POST /api/auth/logout`
+- **Description**: Clears authentication state.
+- **Auth**: Public / Private
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Logged out successfully"
   }
   ```
 
 ---
 
-### 2.3 User Profile (`/api/users`)
+### 2.3 Student Profile (`/api/users`)
 
 #### `GET /api/users/profile`
-- **Description**: Retrieves full profile of the logged-in student.
-- **Auth**: Private
+- **Description**: Retrieves current student's detailed profile.
+- **Auth**: Private (`protect`)
 - **Response `200 OK`**:
   ```json
   {
-    "status": "success",
-    "profile": {
-      "name": "Alex Johnson",
-      "email": "alex@university.edu",
-      "college": "State Engineering University",
-      "city": "Boston",
-      "course": "B.Tech Computer Science",
-      "bio": "Enjoys quiet study hours, coding, and playing badminton.",
-      "profileImage": "https://..."
+    "success": true,
+    "data": {
+      "user": {
+        "id": "67b3f1...",
+        "name": "Alex Johnson",
+        "email": "alex@university.edu",
+        "college": "State Engineering University",
+        "city": "Boston",
+        "course": "B.Tech Computer Science",
+        "bio": "CS junior passionate about distributed systems and quiet study environments."
+      }
     }
   }
   ```
 
 #### `PUT /api/users/profile`
-- **Description**: Updates profile details (bio, college, city, course).
-- **Auth**: Private
+- **Description**: Updates student editable profile fields.
+- **Auth**: Private (`protect`)
 - **Request Body**:
   ```json
   {
-    "bio": "Updated bio text",
-    "city": "Cambridge"
+    "name": "Alex Johnson",
+    "college": "Apex Institute",
+    "course": "Computer Engineering",
+    "city": "Boston",
+    "bio": "Updated bio text."
   }
   ```
 - **Response `200 OK`**:
   ```json
   {
-    "status": "success",
-    "message": "Profile updated successfully"
+    "success": true,
+    "message": "Profile updated successfully",
+    "data": {
+      "user": { "..." : "..." }
+    }
   }
   ```
 
 ---
 
-### 2.4 Preferences & Questionnaire (`/api/preferences`)
+### 2.4 Lifestyle Preferences (`/api/preferences`)
 
 #### `GET /api/preferences`
-- **Description**: Retrieves saved questionnaire responses for the active user.
-- **Auth**: Private
-- **Response `200 OK`**: Returns current preference document.
-
-#### `POST /api/preferences`
-- **Description**: Submits the initial compatibility questionnaire responses.
-- **Auth**: Private
-- **Request Body**:
-  ```json
-  {
-    "budget": "5000-8000",
-    "sleepSchedule": "night_owl",
-    "wakeUpSchedule": "7am_9am",
-    "foodPreference": "vegetarian",
-    "cleanliness": "meticulous",
-    "noisePreference": "moderate",
-    "studyHabit": "in_room_quiet",
-    "socialLevel": "ambivert",
-    "smokingPreference": "strictly_non_smoker",
-    "guestPreference": "occasional_guests",
-    "preferredLocation": "Downtown"
-  }
-  ```
-- **Response `201 Created`**: Returns saved preference document.
-
-#### `PUT /api/preferences`
-- **Description**: Updates existing questionnaire answers.
-- **Auth**: Private
-- **Response `200 OK`**: Returns updated preferences.
-
----
-
-### 2.5 Matches & Compatibility Engine (`/api/matches`)
-
-#### `GET /api/matches`
-- **Description**: Computes and returns candidate roommates ranked by compatibility score.
-- **Auth**: Private (`student`)
-- **Query Params**: `?minScore=60&budget=5000-8000`
+- **Description**: Retrieves current user's lifestyle survey answers.
+- **Auth**: Private (`protect`)
 - **Response `200 OK`**:
   ```json
   {
-    "status": "success",
-    "matches": [
-      {
-        "userId": "64f1b2c3d4e5f6a7b8c9d0e2",
-        "name": "Jordan Lee",
-        "college": "State Engineering University",
-        "score": 92,
-        "commonPreferences": ["Cleanliness: meticulous", "Sleep: night_owl", "Food: vegetarian"],
-        "differences": ["Noise: moderate vs silent"]
+    "success": true,
+    "data": {
+      "preferences": {
+        "sleepSchedule": "night_owl",
+        "cleanliness": "meticulous",
+        "budget": "5000-8000",
+        "foodPreference": "vegetarian",
+        "noisePreference": "silent",
+        "studyHabit": "in_room_quiet",
+        "socialLevel": "ambivert",
+        "smokingPreference": "strictly_non_smoker"
       }
-    ]
+    }
+  }
+  ```
+
+#### `PUT /api/preferences`
+- **Description**: Saves or updates 15 questionnaire responses.
+- **Auth**: Private (`protect`)
+- **Request Body**: JSON object containing preference keys.
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Preferences updated successfully",
+    "data": { "preferences": { "..." : "..." } }
+  }
+  ```
+
+---
+
+### 2.5 Roommate Matches (`/api/matches`)
+
+#### `GET /api/matches`
+- **Description**: Calculates and returns candidate students ranked by compatibility score.
+- **Auth**: Private (`protect`)
+- **Query Parameters**: `search`, `college`, `city`, `minScore`, `sortBy` (`compatibility` | `name`)
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "matches": [
+        {
+          "id": "match-67b3f2...",
+          "userId": "67b3f2...",
+          "user": { "name": "Jordan Lee", "college": "Apex Institute", "..." : "..." },
+          "score": 94,
+          "compatibilityLevel": "Excellent Match",
+          "commonPreferences": ["Night Owl sleep routine", "Meticulous cleanliness"],
+          "differences": ["Moderate noise tolerance vs. your silent focus preference"],
+          "categoryBreakdown": [
+            { "name": "Sleep Schedule", "score": 100, "status": "Harmonious" },
+            { "name": "Budget Parity", "score": 100, "status": "Matched" }
+          ]
+        }
+      ],
+      "total": 5
+    }
   }
   ```
 
 #### `GET /api/matches/:id`
-- **Description**: Detailed compatibility breakdown for a specific candidate match.
-- **Auth**: Private (`student`)
-- **Response `200 OK`**: Full comparative analysis with trait-by-trait alignment.
+- **Description**: Detailed compatibility breakdown for a specific candidate.
+- **Auth**: Private (`protect`)
+- **Response `200 OK`**: Single match breakdown object.
 
 ---
 
 ### 2.6 Roommate Requests (`/api/requests`)
 
 #### `POST /api/requests`
-- **Description**: Dispatches a roommate connection request to a candidate.
-- **Auth**: Private (`student`)
+- **Description**: Sends a roommate request to a candidate student.
+- **Auth**: Private (`protect`)
 - **Request Body**:
   ```json
   {
-    "receiverId": "64f1b2c3d4e5f6a7b8c9d0e2"
+    "receiverId": "67b3f2...",
+    "message": "Hi Jordan! Loved your profile, let's explore a flat near campus."
   }
   ```
 - **Response `201 Created`**:
   ```json
   {
-    "status": "success",
-    "message": "Roommate request sent"
+    "success": true,
+    "message": "Roommate request sent successfully",
+    "data": {
+      "request": {
+        "id": "67b3f9...",
+        "senderId": "67b3f1...",
+        "receiverId": "67b3f2...",
+        "status": "pending"
+      }
+    }
   }
   ```
 
-#### `GET /api/requests`
-- **Description**: Retrieves list of sent and received connection requests.
-- **Auth**: Private (`student`)
-- **Response `200 OK`**: List of requests with sender/receiver details and statuses.
+#### `GET /api/requests/received`
+- **Description**: Retrieves list of pending received requests.
+- **Auth**: Private (`protect`)
 
-#### `PUT /api/requests/:id`
-- **Description**: Responds to a received request by accepting or rejecting it.
-- **Auth**: Private (`student`)
-- **Request Body**:
-  ```json
-  {
-    "status": "accepted" // or "rejected"
-  }
-  ```
-- **Response `200 OK`**: Updated request state.
+#### `GET /api/requests/sent`
+- **Description**: Retrieves list of pending sent requests.
+- **Auth**: Private (`protect`)
+
+#### `PUT /api/requests/:id/accept`
+- **Description**: Accepts an incoming request; unlocks direct messaging between the two students.
+- **Auth**: Private (`protect`)
+
+#### `PUT /api/requests/:id/reject`
+- **Description**: Declines an incoming request.
+- **Auth**: Private (`protect`)
+
+#### `DELETE /api/requests/:id`
+- **Description**: Cancels an outgoing pending request.
+- **Auth**: Private (`protect`)
 
 ---
 
-### 2.7 Messages (`/api/messages`)
+### 2.7 Direct Messaging (`/api/messages`)
+
+#### `GET /api/messages/conversations`
+- **Description**: Lists active conversation threads (requires an accepted request).
+- **Auth**: Private (`protect`)
 
 #### `GET /api/messages/:userId`
-- **Description**: Fetches message history between two mutually accepted roommates.
-- **Auth**: Private (`student`)
-- **Response `200 OK`**: Array of message logs sorted chronologically.
+- **Description**: Retrieves message history with a connected roommate.
+- **Auth**: Private (`protect`)
 
 #### `POST /api/messages`
-- **Description**: Posts a new direct message to an accepted roommate.
-- **Auth**: Private (`student`)
+- **Description**: Sends a message to an accepted connection.
+- **Auth**: Private (`protect`)
 - **Request Body**:
   ```json
   {
-    "receiverId": "64f1b2c3d4e5f6a7b8c9d0e2",
-    "message": "Hey! Would you like to check out the 2BHK apartment near campus?"
+    "receiverId": "67b3f2...",
+    "content": "Hey! Did you check out the 2BHK flat listing on Beacon St?"
   }
   ```
-- **Response `201 Created`**: Created message record.
 
 ---
 
-### 2.8 Admin (`/api/admin`)
+### 2.8 Administration (`/api/admin`)
 
-#### `GET /api/admin/users`
-- **Description**: Paginated directory of registered students with profile summaries.
-- **Auth**: Private (`admin` only)
-- **Response `200 OK`**: Users list and total count.
+*All administrative endpoints require `authorize('admin')` role check.*
 
-#### `DELETE /api/admin/users/:id`
-- **Description**: Deletes an abusive or violating user account.
-- **Auth**: Private (`admin` only)
-- **Response `200 OK`**: Deletion confirmation.
-
-#### `PUT /api/admin/users/:id/status`
-- **Description**: Toggles user account status (e.g., active, suspended).
-- **Auth**: Private (`admin` only)
-- **Request Body**:
+#### `GET /api/admin/metrics`
+- **Description**: Platform summary statistics.
+- **Auth**: Admin Private
+- **Response `200 OK`**:
   ```json
   {
-    "status": "suspended"
+    "success": true,
+    "data": {
+      "metrics": {
+        "totalUsers": 6,
+        "activeStudents": 5,
+        "suspendedUsers": 0,
+        "totalRequests": 3,
+        "acceptedConnections": 1,
+        "pendingReports": 2
+      }
+    }
   }
   ```
-- **Response `200 OK`**: Status update confirmation.
+
+#### `GET /api/admin/users`
+- **Description**: Paginated student user directory.
+- **Auth**: Admin Private
+
+#### `PUT /api/admin/users/:id/status`
+- **Description**: Toggles student account status (`active` | `suspended`).
+- **Auth**: Admin Private
+- **Request Body**: `{ "status": "suspended" }`
+
+#### `GET /api/admin/reports`
+- **Description**: List student safety reports.
+- **Auth**: Admin Private
+
+#### `PUT /api/admin/reports/:id/status`
+- **Description**: Updates report status (`investigating` | `resolved` | `dismissed`).
+- **Auth**: Admin Private

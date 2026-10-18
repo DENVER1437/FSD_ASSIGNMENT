@@ -102,3 +102,13 @@ export const login = asyncHandler(async (req, res) => {
 export const getMe = asyncHandler(async (req, res) => {
   return sendSuccess(res, { user: req.user.toSafeObject() }, 'User profile retrieved');
 });
+
+/**
+ * @desc    Logout current user
+ * @route   POST /api/auth/logout
+ * @access  Public
+ */
+export const logout = asyncHandler(async (req, res) => {
+  return sendSuccess(res, null, 'Logged out successfully');
+});
+

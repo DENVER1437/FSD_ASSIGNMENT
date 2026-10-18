@@ -1,228 +1,344 @@
 # NestMatch – Smart Roommate Compatibility Finder
 
-[![Status](https://img.shields.io/badge/Phase-Phase%201%20Frontend%20UI%20Complete-success)](#development-roadmap)
-[![Stack](https://img.shields.io/badge/Stack-MERN-blue)](#technology-stack)
+[![Status](https://img.shields.io/badge/Status-Fully%20Integrated%20%26%20Verified-success)](#development-roadmap)
+[![Stack](https://img.shields.io/badge/Stack-MERN%20(React%20%2B%20Express%20%2B%20MongoDB)-blue)](#technology-stack)
+[![Tests](https://img.shields.io/badge/Tests-21%2F21%20Passing-brightgreen)](#automated-testing--qa)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
 
 ## 1. Project Description
-**NestMatch** is a full-stack MERN application engineered specifically for university and college students to find compatible roommates through lifestyle preference analysis and an **explainable compatibility scoring engine**. 
+**NestMatch** is an end-to-end, full-stack MERN application engineered for university and college students to find compatible roommates through structured lifestyle preference analysis and an **explainable compatibility scoring engine**.
 
-Instead of relying on arbitrary classifieds or random room allocations, NestMatch empowers students to declare their lifestyle habits (sleep hours, cleanliness standards, budget ranges, noise preferences, and study habits), inspect matched compatibility breakdowns, send roommate requests, and connect upon mutual consent.
-
----
-
-## 2. Problem Statement
-Finding a compatible roommate is one of the most stressful experiences of university life. Mismatched habits lead to friction:
-- Conflicting sleep and wake routines causing fatigue and stress.
-- Divergent standards of room cleanliness and chore management.
-- Budget mismatches on shared rent and utilities.
-- Clashing study environments (silent study vs. loud music/socializing).
-
-Standard rental platforms catalog rooms, not roommate personalities. NestMatch bridges this gap with structured compatibility intelligence.
+Instead of relying on random hostel allocations or unstructured classifieds, NestMatch empowers students to declare their lifestyle habits across 15 parameters (sleep hours, cleanliness standards, budget ranges, noise tolerance, food choices, and study habits), inspect matched compatibility breakdowns, dispatch roommate invitations, and communicate securely upon mutual consent.
 
 ---
 
-## 3. Main Objective
-To develop a robust, secure, and user-friendly web platform where students can:
-1. Build academic and personal student profiles.
-2. Complete a targeted multi-dimensional lifestyle questionnaire.
-3. Review algorithmically ranked roommate matches with clear, explainable score breakdowns.
-4. Manage peer roommate requests through a mutual accept/reject workflow.
-5. Provide administrative oversight for user moderation and safety.
+## 2. Problem Statement & Academic Motivation
+Finding a compatible roommate is a critical challenge in student life:
+- **Sleep Schedule Friction**: Night owls clashing with early risers.
+- **Cleanliness Discrepancies**: Meticulous domestic standards vs. relaxed clutter habits.
+- **Budget Disparity**: Divergent expectations on monthly rent and utilities.
+- **Study Environment Conflicts**: Undisturbed room quiet vs. active audio/socializing.
+
+NestMatch solves this by providing:
+1. Multi-dimensional lifestyle questionnaire (15 questions).
+2. Transparent, explainable weighted scoring algorithm (0–100%).
+3. Mutual invitation and request lifecycle (Pending, Accepted, Declined).
+4. Restricted communication (direct messaging unlocked only upon mutual request acceptance).
+5. Administrative moderation (user management, account suspension, and safety reports).
 
 ---
 
-## 4. Core Features (Mandatory Scope)
-1. **Landing Page**: Modern, responsive introduction with clear student onboarding.
-2. **Student Registration & Login**: Secure account creation with JWT and bcrypt password hashing.
-3. **Student Profile**: Editable academic and biographical information.
-4. **Lifestyle Preferences**: Preferences capturing budget, sleep, cleanliness, and study habits.
-5. **Compatibility Questionnaire**: Interactive multi-step survey.
-6. **Compatibility Calculation**: Weighted mathematical scoring engine.
-7. **Find Matches**: Feed of compatible student profiles ranked by score.
-8. **Match Details & Explanation**: Detailed inspection of common traits vs. differences.
-9. **Roommate Requests**: Peer connection request dispatching and tracking.
-10. **Accept/Reject Workflow**: Mutual connection state transitions.
-11. **Responsive Design**: Seamless viewing on mobile, tablet, and desktop viewports.
-12. **MongoDB Database**: Document-oriented data persistence with Mongoose.
-13. **Decoupled REST API**: Express.js backend with structured controllers and routes.
-14. **GitHub & Deployment Ready**: Clean CI/CD pipelines to Vercel, Render, and MongoDB Atlas.
+## 3. Technology Stack
+
+| Layer | Technology | Version | Purpose |
+|---|---|---|---|
+| **Frontend** | React | ^19.0.0 | Component-based single-page user interface |
+| **Tooling** | Vite | ^8.3.4 | Ultra-fast client bundler and dev server |
+| **Styling** | Tailwind CSS | ^3.4.17 | Utility-first responsive design tokens |
+| **Routing** | React Router DOM | ^7.1.3 | Declarative client routing and route guards |
+| **HTTP Client** | Axios | ^1.7.9 | Centralized client with JWT request interceptors |
+| **Backend** | Node.js + Express.js | ^4.21.2 | Scalable RESTful API service |
+| **Database** | MongoDB + Mongoose | ^8.9.5 | Schema validation, indexes, and document persistence |
+| **Security** | bcryptjs + jsonwebtoken | ^2.4.3 / ^9.0.2 | Password hashing (salt round 10) & stateless JWT auth |
+| **Icons** | Lucide React | ^0.469.0 | Accessible iconography |
 
 ---
 
-## 5. Technology Stack
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Frontend** | React.js (v19) + Vite | Dynamic SPA frontend with rapid HMR |
-| **Styling** | Tailwind CSS (v3) | Utility-first, responsive design system |
-| **Routing** | React Router DOM (v7) | Client-side routing and route guarding |
-| **HTTP Client** | Axios | Configured API client with interceptors |
-| **Backend** | Node.js + Express.js | Scalable REST API backend |
-| **Database** | MongoDB + Mongoose | Schema-driven document storage |
-| **Authentication** | JWT + bcryptjs | Stateless token auth & secure password hashing |
-| **Deployment** | Vercel, Render, MongoDB Atlas | Production cloud hosting |
-
----
-
-## 6. Project Architecture
-
-NestMatch follows a strictly decoupled **MERN architecture**:
-- **Client**: Single-page application built with React and styled via Tailwind CSS, communicating with the backend over HTTPS REST calls.
-- **Server**: Express.js REST API structured using a **Layered Architecture** (`routes` -> `middleware` -> `controllers` -> `services` -> `models`).
-- **Database**: MongoDB cloud database managing 6 core collections: `User`, `Preference`, `Request`, `Message`, `Match`, and `Report`.
-
----
-
-## 7. Folder Structure
+## 4. System Architecture
 
 ```text
-NestMatch/
-├── client/                     # Frontend Application (React + Vite + Tailwind)
-│   ├── public/                 # Static assets
-│   ├── src/
-│   │   ├── assets/             # Images and media
-│   │   ├── components/         # Reusable UI components (Navbar, Button, Card)
-│   │   ├── constants/          # Application constants (Roles, Routes)
-│   │   ├── context/            # React context providers (AuthContext)
-│   │   ├── hooks/              # Custom React hooks
-│   │   ├── layouts/            # Page layouts
-│   │   ├── pages/              # View pages (Home, Profile, Matches)
-│   │   ├── routes/             # AppRoutes and route definitions
-│   │   ├── services/           # Axios API instance and endpoints
-│   │   ├── utils/              # Client utility and helper functions
-│   │   ├── App.jsx             # Root application component
-│   │   ├── index.css           # Tailwind CSS directives
-│   │   └── main.jsx            # Application entrypoint
-│   ├── .env.example            # Client environment variables template
-│   ├── .gitignore              # Client ignore rules
-│   ├── package.json            # Client dependencies
-│   ├── postcss.config.js       # PostCSS config for Tailwind
-│   ├── tailwind.config.js      # Tailwind CSS design configuration
-│   └── vite.config.js          # Vite build config
-│
-├── server/                     # Backend API (Node.js + Express)
-│   ├── config/                 # Database and service configurations
-│   ├── controllers/            # Route request handlers
-│   ├── middleware/             # Auth (JWT) and error middleware
-│   ├── models/                 # Mongoose data models
-│   ├── routes/                 # Express API routes
-│   ├── services/               # Matching logic and domain services
-│   ├── utils/                  # Server helper utilities
-│   ├── validators/             # Request payload validators
-│   ├── .env.example            # Server environment variables template
-│   ├── .gitignore              # Server ignore rules
-│   ├── package.json            # Server dependencies
-│   └── server.js               # Express application entrypoint
-│
-├── docs/                       # Project Documentation
-│   ├── api-plan.md             # REST API endpoints specification
-│   ├── architecture.md         # Detailed MERN system architecture
-│   ├── database-design.md      # MongoDB schemas and ER diagrams
-│   ├── development-roadmap.md  # 14-phase roadmap & algorithm math
-│   └── project-scope.md        # Feature scope freeze and constraints
-│
-├── .gitignore                  # Root Git ignore rules
-├── LICENSE                     # MIT Open Source License
-└── README.md                   # Master project documentation
+┌─────────────────────────────────────────────────────────────┐
+│                    REACT 19 FRONTEND                        │
+│  (Tailwind CSS • React Router • Context API • Axios Client) │
+└──────────────┬───────────────────────────────▲──────────────┘
+               │ HTTP Requests (JSON + Bearer) │ HTTP Responses
+               ▼                               │
+┌─────────────────────────────────────────────────────────────┐
+│                   EXPRESS.JS BACKEND                        │
+│  ├── Middleware: CORS (Configured Origin)                   │
+│  │               Rate Limiting & JSON Parser (10kb)         │
+│  │               JWT Verification (authMiddleware.js)       │
+│  │               Role Authorization (authorize('admin'))    │
+│  │               Centralized Error Handler (errorMiddleware)│
+│  ├── Controllers: Auth, Users, Preferences, Matches,        │
+│  │                Requests, Messages, Admin                 │
+│  └── Services:    Matching Compatibility Engine (8 Factors) │
+└──────────────┬───────────────────────────────▲──────────────┘
+               │ Mongoose Schemas & Queries    │ Document Data
+               ▼                               │
+┌─────────────────────────────────────────────────────────────┐
+│                      MONGODB DATABASE                       │
+│  Collections: Users • Preferences • Matches • Requests      │
+│               Messages • Reports                            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 8. Matching Algorithm Overview
+## 5. Algorithmic Compatibility Engine & Worked Example
 
-The planned compatibility algorithm compares student lifestyle preferences using a weighted model:
+The matching algorithm computes compatibility on the backend (`server/services/matchingService.js`) using persisted student preferences:
 
-$$\text{Compatibility} = \sum \left( \text{Weight}_i \times \text{MatchFactor}_i \right)$$
+$$\text{Total Score} = \sum_{i=1}^{8} \left( \text{Factor Weight}_i \times \text{Factor Match Score}_i \right)$$
 
-### Weight Distribution:
-- **Sleep Schedule**: 20%
-- **Budget Parity**: 20%
-- **Cleanliness Standard**: 15%
-- **Food & Dietary Habits**: 10%
-- **Noise Preference**: 10%
-- **Study Habits**: 10%
-- **Social Extroversion**: 10%
-- **Other Preferences**: 5%
+### 5.1 Weight Distribution
+| Factor | Weight | Evaluation Method |
+|---|---:|---|
+| **Sleep Schedule** | 20% | Categorical agreement + wake-up time proximity |
+| **Budget** | 20% | Step distance penalty across 4 budget tiers |
+| **Cleanliness** | 15% | Ordinal distance penalty across cleanliness tiers |
+| **Food Preferences** | 10% | Dietary harmony matrix (veg vs. non-veg compatibility) |
+| **Noise Tolerance** | 10% | Sound level tolerance evaluation |
+| **Study Habits** | 10% | Study location & ambient audio agreement |
+| **Social Extroversion** | 10% | Social battery & guest policy alignment |
+| **Other Lifestyle Factors** | 5% | Smoking/vaping domestic policy adherence |
+| **Total** | **100%** | Normalized strictly to range **0 – 100%** |
 
-Each match produces an explainable report displaying **Common Preferences** and **Key Differences**.
+### 5.2 Worked Calculation Example for FSD Viva
+Consider two students:
+- **Student A (Alex)**:
+  - Sleep: `night_owl` | Budget: `5000-8000` | Cleanliness: `meticulous`
+  - Food: `vegetarian` | Noise: `silent` | Study: `in_room_quiet`
+  - Social: `ambivert` | Smoking: `strictly_non_smoker`
+- **Student B (Jordan)**:
+  - Sleep: `night_owl` (Identical $\to$ $1.0 \times 20 = 20.0\%$)
+  - Budget: `5000-8000` (Exact match $\to$ $1.0 \times 20 = 20.0\%$)
+  - Cleanliness: `moderate` (1 step away $\to$ $0.6 \times 15 = 9.0\%$)
+  - Food: `vegetarian` (Exact match $\to$ $1.0 \times 10 = 10.0\%$)
+  - Noise: `silent` (Exact match $\to$ $1.0 \times 10 = 10.0\%$)
+  - Study: `in_room_quiet` (Exact match $\to$ $1.0 \times 10 = 10.0\%$)
+  - Social: `ambivert` (Exact match $\to$ $1.0 \times 10 = 10.0\%$)
+  - Smoking: `strictly_non_smoker` (Exact match $\to$ $1.0 \times 5 = 5.0\%$)
 
----
+$$\text{Final Compatibility Score} = 20 + 20 + 9 + 10 + 10 + 10 + 10 + 5 = 94\%$$
 
-## 9. Development Roadmap
-
-```text
-PHASE 0: Project Foundation (COMPLETED)
-   ↓
-PHASE 1: Frontend UI
-   ↓
-PHASE 2: Responsive Design
-   ↓
-PHASE 3: Backend + Database
-   ↓
-PHASE 4: Authentication
-   ↓
-PHASE 5: Profile + Preferences
-   ↓
-PHASE 6: Questionnaire
-   ↓
-PHASE 7: Matching Algorithm
-   ↓
-PHASE 8: Find Matches
-   ↓
-PHASE 9: Requests Workflow
-   ↓
-PHASE 10: Chat / Messaging
-   ↓
-PHASE 11: Dashboard + Admin
-   ↓
-PHASE 12: Testing & QA
-   ↓
-PHASE 13: GitHub + Deployment
-   ↓
-FINAL DEMO + VIVA
-```
+The response also breaks down **Common Preferences** (`✓ Night Owl schedule`, `✓ Cleanliness standards`, etc.) and **Differences to Discuss** (`• Jordan is moderate while you are meticulous on room chores`).
 
 ---
 
-## 10. Local Development Setup
+## 6. REST API Endpoint Catalog
+
+### System & Health Probes
+- `GET /api/health` — Lightweight process health check (`200 OK`).
+- `GET /api/ready` — Database readiness probe verifying active MongoDB connection (`200 OK`).
+
+### Authentication (`/api/auth`)
+- `POST /api/auth/register` — Create student account (bcrypt hash, returns JWT).
+- `POST /api/auth/login` — Authenticate credentials (returns user & JWT).
+- `GET /api/auth/me` — Retrieve active authenticated user session (`protect`).
+- `POST /api/auth/logout` — Invalidate user session.
+
+### Student Profile (`/api/users`)
+- `GET /api/users/profile` — Fetch current student's personal & academic profile.
+- `PUT /api/users/profile` — Update personal bio, college, course, city, and phone.
+
+### Lifestyle Preferences (`/api/preferences`)
+- `GET /api/preferences` — Get current user's 15 survey questionnaire answers.
+- `PUT /api/preferences` — Save/update questionnaire answers (persists to MongoDB).
+
+### Roommate Matches (`/api/matches`)
+- `GET /api/matches` — Ranked list of compatible students with score breakdowns.
+- `GET /api/matches/:id` — In-depth compatibility inspection for a specific student candidate.
+
+### Roommate Requests (`/api/requests`)
+- `POST /api/requests` — Dispatch roommate invitation with optional custom intro note.
+- `GET /api/requests/received` — View incoming roommate invitations.
+- `GET /api/requests/sent` — View outgoing roommate invitations.
+- `PUT /api/requests/:id/accept` — Accept invitation (unlocks mutual chat channel).
+- `PUT /api/requests/:id/reject` — Decline incoming invitation.
+- `DELETE /api/requests/:id` — Cancel an outgoing pending invitation.
+
+### Direct Messaging (`/api/messages`)
+- `GET /api/messages/conversations` — List conversations with accepted roommate connections.
+- `GET /api/messages/:userId` — Fetch chronological message history with a partner.
+- `POST /api/messages` — Send a message to an accepted roommate.
+
+### Administration (`/api/admin` — `authorize('admin')`)
+- `GET /api/admin/metrics` — Platform-wide metrics (total users, active requests, reports).
+- `GET /api/admin/users` — Paginated student user directory with status filters.
+- `PUT /api/admin/users/:id/status` — Suspend or activate a student account.
+- `GET /api/admin/reports` — Safety reports moderation queue.
+- `PUT /api/admin/reports/:id/status` — Resolve or dismiss student moderation tickets.
+
+---
+
+## 7. Local Development Setup & Execution
 
 ### Prerequisites
 - Node.js (v18.0.0 or higher)
 - npm (v9.0.0 or higher)
-- Git
+- MongoDB (Local Community Server on `mongodb://127.0.0.1:27017` or MongoDB Atlas SRV URI)
 
-### 1. Clone & Setup
+### 1. Repository Setup
 ```bash
 git clone https://github.com/kotechameet485-droid/fsd-assigment.git
 cd fsd-assigment
 ```
 
-### 2. Frontend Setup
+### 2. Backend Environment & Startup
+```bash
+cd server
+npm install
+```
+Create `server/.env`:
+```env
+PORT=5000
+NODE_ENV=development
+MONGODB_URI=mongodb://127.0.0.1:27017/nestmatch
+JWT_SECRET=supersecret_fsd_nestmatch_key_2026
+CLIENT_URL=http://localhost:5173
+```
+Seed the database with verified students and admin:
+```bash
+npm run seed
+```
+Start the backend development server:
+```bash
+npm run dev
+```
+Verify the server:
+- Health check: `http://localhost:5000/api/health`
+- Database ready check: `http://localhost:5000/api/ready`
+
+### 3. Frontend Environment & Startup
+Open a separate terminal:
 ```bash
 cd client
 npm install
-cp .env.example .env
-npm run dev
 ```
-*Frontend runs on http://localhost:5173*
-
-### 3. Backend Setup
+Create `client/.env`:
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+Start the frontend dev server:
 ```bash
-cd ../server
-npm install
-cp .env.example .env
 npm run dev
 ```
-*Backend runs on http://localhost:5000*
-*Health check available at http://localhost:5000/api/health*
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## 11. Authors & Team
+## 8. Automated Testing & QA
+
+Run the full automated test suite directly from the `server/` directory:
+```bash
+cd server
+npm test
+```
+This single command executes:
+1. **Unit Test Suite** (`node --test tests/*.test.js`):
+   - Identical preferences matching test
+   - Missing preferences handling test
+   - Conflicting preferences test
+   - Partial compatibility test
+   - Budget penalty validation test
+   - Boundary normalization test [0, 100]
+2. **Integration Verification Suite** (`node tests/verifyApi.js`):
+   - Health and Database readiness verification
+   - Registration validation and duplicate account rejection
+   - Password hashing and authentication verification
+   - Tokenless request 401 guard verification
+   - Profile update and persistence verification
+   - Preferences CRUD and questionnaire persistence
+   - Algorithmic compatibility calculation
+   - Request dispatching, acceptance, and state transitions
+   - Conversation listing and message permissions
+   - Admin RBAC enforcement (student gets 403 Forbidden)
+
+### Frontend Build & Lint Verification
+```bash
+cd client
+npm run build    # Validates Vite production bundle compilation
+npm run lint     # Validates static analysis with Oxlint
+```
+
+---
+
+## 9. Comprehensive Manual Testing Guide for Viva
+
+### Scenario 1: New Student Registration & Questionnaire
+1. Navigate to `http://localhost:5173/register`.
+2. Fill in student details:
+   - Full Name: `Maya Patel`
+   - Email: `maya@university.edu`
+   - College: `Apex Institute`
+   - City: `Boston`
+   - Password: `Password123!`
+3. Click **Register & Continue**. You will be directed to the 15-question Compatibility Questionnaire.
+4. Select your habits across the 5 steps (Sleep, Cleanliness, Study, Social, Budget).
+5. Click **Save & Calculate Matches**.
+6. The database stores your responses in `preferences` and re-ranks all potential roommates.
+
+### Scenario 2: Exploring Matches & Inspecting Compatibility
+1. Navigate to `/matches`.
+2. Observe ranked match cards with compatibility percentages (e.g., 94%, 88%).
+3. Click **View Details** on any student card.
+4. Review the breakdown:
+   - Harmonious lifestyle traits (green checkmarks).
+   - Habits worth discussing upfront (amber badges).
+   - Category compatibility index (Cleanliness, Sleep, Budget, Noise, etc.).
+
+### Scenario 3: Request Lifecycle & Direct Chat
+1. Click **Send Roommate Request** on Jordan Lee's profile.
+2. Navigate to `/requests` $\to$ **Sent** tab. Observe the pending invitation.
+3. Sign out via `/settings` $\to$ **Sign Out**.
+4. Sign in as Jordan Lee (`jordan@university.edu` / `Password123!`).
+5. Navigate to `/requests` $\to$ **Received** tab. Click **Accept Request**.
+6. The request moves to **Connected**.
+7. Click **Open Messages** or navigate to `/chat`. Send a message: *"Hi Maya, glad we matched! Want to tour 2BHK flats near campus?"*
+8. The message is persisted in MongoDB and appears in real time in the conversation history.
+
+### Scenario 4: Admin Security & Moderation
+1. Sign out and sign in as the administrator (`admin@nestmatch.edu` / `AdminPass123!`).
+2. Notice the navigation changes to the **Admin Console** (`/admin`).
+3. View real-time platform metrics: Total Registered Users, Active Roommate Requests, and Pending Safety Reports.
+4. Navigate to `/admin/users` to review the student directory and toggle user active/suspended state.
+5. Navigate to `/admin/reports` to inspect safety flags and resolve moderation tickets.
+
+---
+
+## 10. FSD Viva & Academic Concept Guide
+
+| Question / Concept | Explanation & Code References |
+|---|---|
+| **How does React communicate with Express?** | React uses Axios configured in `client/src/services/api.js`. An Axios interceptor automatically reads the JWT stored in `localStorage` (`nestmatch_token`) and injects it into the `Authorization: Bearer <token>` header of every outgoing request. |
+| **How are passwords secured?** | We use `bcryptjs` in `server/models/User.js`. When a user registers or updates their password, a pre-save hook checks `isModified('password')` and hashes the plaintext password with 10 salt rounds. Plaintext is never saved. |
+| **How does stateless JWT authentication work?** | Upon valid login, `server/utils/jwt.js` signs a JSON Web Token containing `userId` and `role` using HMAC-SHA256 with a secret key. The client includes this token in subsequent requests. `authMiddleware.js` extracts and verifies the token with `jwt.verify()`. |
+| **How is Role-Based Access Control (RBAC) enforced?** | The backend middleware `authorize('admin')` in `server/middleware/authMiddleware.js` checks `req.user.role === 'admin'`. If a non-admin student attempts to call `/api/admin/metrics`, the server returns `403 Forbidden` regardless of client state. |
+| **How does the matching formula handle incomplete data?** | `server/services/matchingService.js` provides default baselines for every factor. If a student has not declared a specific habit, the factor assigns a neutral baseline score (typically 50%) rather than inflating the compatibility or throwing a runtime `TypeError`. |
+| **Why is messaging restricted to accepted connections?** | To ensure student domestic safety and prevent unsolicited spam, `server/controllers/messageController.js` queries the `Request` collection to confirm an `accepted` request exists between `senderId` and `recipientId` before permitting any message insertion. |
+
+---
+
+## 11. Deployment Guidelines
+
+### Frontend Deployment (Vercel)
+1. Link your GitHub repository in the Vercel dashboard.
+2. Set Root Directory to `client`.
+3. Set Framework Preset to `Vite`.
+4. Add Environment Variable:
+   - `VITE_API_URL`: Your deployed backend URL (e.g., `https://nestmatch-api.onrender.com/api`).
+5. Deploy.
+
+### Backend Deployment (Render / Railway)
+1. Create a Web Service pointing to your repository.
+2. Set Root Directory to `server`.
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+5. Configure Environment Variables:
+   - `NODE_ENV`: `production`
+   - `PORT`: `5000`
+   - `MONGODB_URI`: Your MongoDB Atlas connection string (`mongodb+srv://...`)
+   - `JWT_SECRET`: A high-entropy random string (e.g., 64 characters)
+   - `CLIENT_URL`: Your deployed frontend URL (e.g., `https://nestmatch.vercel.app`)
+
+---
+
+## 12. Authors & Academic Credentials
 
 - **Student / Author**: Meet Kotecha
 - **Course**: Full Stack Development (FSD)
+- **Degree**: B.Tech Computer Science & Engineering
 - **Academic Year**: 2026

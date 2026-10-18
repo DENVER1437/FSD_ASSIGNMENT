@@ -9,7 +9,6 @@ import {
   X,
   MessageSquare,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -18,12 +17,10 @@ import ScoreBadge from '../components/ScoreBadge';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
 import { useMatch } from '../context/MatchContext';
-import { useToast } from '../context/ToastContext';
 
 export function RequestsPage() {
   const [activeTab, setActiveTab] = useState('received'); // 'received' | 'sent' | 'accepted'
   const { requests, acceptRequest, rejectRequest, cancelRequest } = useMatch();
-  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const receivedRequests = requests.filter(

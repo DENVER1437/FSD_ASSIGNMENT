@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,6 +12,7 @@ import {
   Send,
   MessageSquare,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -19,6 +21,7 @@ import ScoreBadge from '../components/ScoreBadge';
 import EmptyState from '../components/EmptyState';
 import { useMatch } from '../context/MatchContext';
 import { useToast } from '../context/ToastContext';
+import { matchService } from '../services/matchService';
 
 export function MatchDetailsPage() {
   const { id } = useParams();
@@ -26,7 +29,37 @@ export function MatchDetailsPage() {
   const { matches, requests, sendRequest } = useMatch();
   const { showToast } = useToast();
 
-  const match = matches.find((m) => m.id === id || m.userId === id);
+  const [directMatch, setDirectMatch] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const contextMatch = matches.find((m) => m.id === id || m.userId === id);
+  const match = contextMatch || directMatch;
+
+  useEffect(() => {
+    if (!contextMatch && id) {
+      setLoading(true);
+      matchService
+        .getMatchDetails(id)
+        .then((res) => {
+          if (res?.data?.match) {
+            setDirectMatch(res.data.match);
+          }
+        })
+        .catch((err) => {
+          console.warn('Match direct lookup failed:', err);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [id, contextMatch]);
+
+  if (loading) {
+    return (
+      <div className="py-24 text-center">
+        <Loader2 className="w-8 h-8 text-brand-600 animate-spin mx-auto mb-3" />
+        <p className="text-sm text-stone-500">Calculating compatibility breakdown...</p>
+      </div>
+    );
+  }
 
   if (!match) {
     return (

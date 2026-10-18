@@ -1,61 +1,108 @@
-import { createContext, useContext, useState } from 'react';
-import { MOCK_CURRENT_USER, MOCK_ADMIN_USER } from '../data/mockUsers';
-import { mockAuthService } from '../services/mockAuthService';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Pre-hydrated with demo student so user can immediately experience all interactive views
-  const [user, setUser] = useState(MOCK_CURRENT_USER);
-  const [role, setRole] = useState('student'); // 'student' | 'admin'
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Restore authenticated session on initial mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = localStorage.getItem('nestmatch_token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await authService.getCurrentUser();
+        if (res.data?.user) {
+          setUser(res.data.user);
+          setRole(res.data.user.role);
+          setIsAuthenticated(true);
+          localStorage.setItem('nestmatch_user', JSON.stringify(res.data.user));
+        } else {
+          localStorage.removeItem('nestmatch_token');
+          localStorage.removeItem('nestmatch_user');
+          setUser(null);
+          setRole(null);
+          setIsAuthenticated(false);
+        }
+      } catch {
+        localStorage.removeItem('nestmatch_token');
+        localStorage.removeItem('nestmatch_user');
+        setUser(null);
+        setRole(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const login = async (email, password) => {
-    const res = await mockAuthService.login(email, password);
-    if (res.success) {
-      setUser(res.user);
-      setRole(res.role);
-      setIsAuthenticated(true);
-      return { success: true };
+    try {
+      const res = await authService.login(email, password);
+      if (res.data?.token && res.data?.user) {
+        localStorage.setItem('nestmatch_token', res.data.token);
+        localStorage.setItem('nestmatch_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        setRole(res.data.user.role);
+        setIsAuthenticated(true);
+        return { success: true, user: res.data.user };
+      }
+      return { success: false, message: res.message || 'Login failed' };
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || 'Unable to sign in. Please verify your credentials.';
+      return { success: false, message };
     }
-    return { success: false, message: 'Invalid credentials' };
   };
 
   const register = async (formData) => {
-    const res = await mockAuthService.register(formData);
-    if (res.success) {
-      setUser(res.user);
-      setRole(res.role);
-      setIsAuthenticated(true);
-      return { success: true };
+    try {
+      const res = await authService.register(formData);
+      if (res.data?.token && res.data?.user) {
+        localStorage.setItem('nestmatch_token', res.data.token);
+        localStorage.setItem('nestmatch_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        setRole(res.data.user.role);
+        setIsAuthenticated(true);
+        return { success: true, user: res.data.user };
+      }
+      return { success: false, message: res.message || 'Registration failed' };
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || 'Registration failed. Please check form values.';
+      return { success: false, message };
     }
-    return { success: false, message: 'Registration failed' };
   };
 
-  const logout = () => {
-    mockAuthService.logout();
-    setUser(null);
-    setRole(null);
-    setIsAuthenticated(false);
-  };
-
-  const switchDemoRole = (newRole) => {
-    if (newRole === 'admin') {
-      setUser(MOCK_ADMIN_USER);
-      setRole('admin');
-      setIsAuthenticated(true);
-    } else {
-      setUser(MOCK_CURRENT_USER);
-      setRole('student');
-      setIsAuthenticated(true);
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      localStorage.removeItem('nestmatch_token');
+      localStorage.removeItem('nestmatch_user');
+      setUser(null);
+      setRole(null);
+      setIsAuthenticated(false);
     }
   };
 
   const updateUser = (updatedFields) => {
-    setUser((prev) => ({
-      ...prev,
-      ...updatedFields,
-    }));
+    setUser((prev) => {
+      if (!prev) return updatedFields;
+      const merged = { ...prev, ...updatedFields };
+      localStorage.setItem('nestmatch_user', JSON.stringify(merged));
+      return merged;
+    });
   };
 
   return (
@@ -64,10 +111,10 @@ export function AuthProvider({ children }) {
         user,
         role,
         isAuthenticated,
+        loading,
         login,
         register,
         logout,
-        switchDemoRole,
         updateUser,
       }}
     >
@@ -83,3 +130,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export default AuthContext;

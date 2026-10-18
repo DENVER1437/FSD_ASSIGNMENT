@@ -100,7 +100,10 @@ export const getMatches = asyncHandler(async (req, res) => {
  */
 export const getMatchDetails = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
-  const targetId = req.params.id;
+  let targetId = req.params.id;
+  if (targetId && targetId.startsWith('match-')) {
+    targetId = targetId.replace('match-', '');
+  }
 
   if (currentUserId.toString() === targetId) {
     return sendError(res, 'Cannot inspect compatibility with yourself', 400);

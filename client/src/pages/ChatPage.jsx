@@ -4,9 +4,7 @@ import {
   Send,
   Search,
   ArrowLeft,
-  Shield,
   Info,
-  Clock,
   CheckCheck,
 } from 'lucide-react';
 import Card from '../components/Card';
@@ -18,44 +16,46 @@ import { useAuth } from '../context/AuthContext';
 
 export function ChatPage() {
   const { conversations, sendMessage } = useMatch();
-  const { user } = useAuth();
+  const { user: _currentUser } = useAuth();
 
-  const [activeConvId, setActiveConvId] = useState(
-    conversations[0]?.id || null
-  );
+  const [activeConvId, setActiveConvId] = useState(null);
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
-  const activeConversation = conversations.find((c) => c.id === activeConvId);
+  // Auto-select first conversation once loaded
+  const currentActiveId = activeConvId || conversations[0]?.id || null;
+  const activeConversation = conversations.find((c) => c.id === currentActiveId);
 
   const filteredConversations = conversations.filter((c) =>
-    c.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+    c.user?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputText.trim() || !activeConvId) return;
+    if (!inputText.trim() || !currentActiveId) return;
 
-    sendMessage(activeConvId, inputText);
+    const textToSend = inputText;
     setInputText('');
+    await sendMessage(currentActiveId, textToSend);
   };
 
   return (
     <div className="h-[calc(100vh-8.5rem)] flex flex-col space-y-4 animate-in fade-in duration-150">
-      {/* Simulation Notice Banner */}
+      {/* Real Connection Security Notice Banner */}
       <div className="p-3 bg-stone-100 border border-stone-200 rounded-xl text-xs text-stone-600 flex items-center justify-between">
         <span className="flex items-center gap-1.5 font-medium">
           <Info className="w-4 h-4 text-brand-600 shrink-0" />
-          <span>Interactive Chat Demonstration — Messages are preserved in local session state.</span>
+          <span>Direct Messaging — Communications are restricted to mutually accepted roommate connections.</span>
         </span>
-        <span className="text-[10px] uppercase font-bold text-stone-400 hidden sm:inline">
-          Phase 1 Mock UI
+        <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full hidden sm:inline">
+          Active Thread
         </span>
       </div>
 
       {/* Main Chat Container */}
       <Card className="flex-1 flex overflow-hidden border-stone-200/90 shadow-subtle min-h-[500px]">
+
         {/* Left Panel: Conversation List */}
         <div
           className={`w-full md:w-80 border-r border-stone-200 bg-white flex flex-col ${

@@ -23,15 +23,23 @@ const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Validate core configuration
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.warn('[Warning]: JWT_SECRET is not explicitly defined. Using development default.');
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('[FATAL CONFIG ERROR]: JWT_SECRET environment variable is missing in production.');
+  process.exit(1);
 }
 
 // Security & Parsing Middleware
+const clientUrls = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
-  CLIENT_URL,
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
+  ...new Set([
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    ...clientUrls,
+  ]),
 ];
 
 app.use(
@@ -40,8 +48,10 @@ app.use(
       // Allow requests with no origin (like mobile apps, curl, postman)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
-      } else {
+      } else if (process.env.NODE_ENV !== 'production') {
         callback(null, true); // Permissive in dev to avoid blocking testers
+      } else {
+        callback(new Error(`Blocked by CORS policy: ${origin}`));
       }
     },
     credentials: true,
@@ -55,6 +65,7 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.get('/', (req, res) => {
   res.status(200).json({
     status: 'success',
+    success: true,
     message: 'Welcome to NestMatch REST API service.',
     documentation: '/api/health',
   });
@@ -63,7 +74,8 @@ app.get('/', (req, res) => {
 // Lightweight Health Check (Public)
 app.get('/api/health', (req, res) => {
   res.status(200).json({
-    status: 'success',
+    status: 'healthy',
+    success: true,
     project: 'NestMatch – Smart Roommate Compatibility Finder',
     uptime: Math.round(process.uptime()),
     timestamp: new Date().toISOString(),
@@ -72,17 +84,25 @@ app.get('/api/health', (req, res) => {
 
 // Readiness Probe (Verifies MongoDB Connectivity)
 app.get('/api/ready', (req, res) => {
-  const dbStatus = isDBConnected();
-  if (dbStatus) {
+  const dbConnected = isDBConnected();
+  if (dbConnected) {
     return res.status(200).json({
       status: 'ready',
-      database: 'connected',
+      success: true,
+      database: {
+        status: 'connected',
+        connected: true,
+      },
       timestamp: new Date().toISOString(),
     });
   } else {
     return res.status(503).json({
       status: 'not_ready',
-      database: 'disconnected',
+      success: false,
+      database: {
+        status: 'disconnected',
+        connected: false,
+      },
       timestamp: new Date().toISOString(),
     });
   }

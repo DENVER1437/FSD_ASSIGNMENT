@@ -4,12 +4,7 @@ import {
   Building,
   MapPin,
   BookOpen,
-  DollarSign,
-  Moon,
   Sparkles,
-  Utensils,
-  Volume2,
-  Users,
   Edit2,
   Check,
   X,
@@ -26,12 +21,16 @@ import { useAuth } from '../context/AuthContext';
 import { useMatch } from '../context/MatchContext';
 import { useToast } from '../context/ToastContext';
 
+import { userService } from '../services/userService';
+import { preferenceService } from '../services/preferenceService';
+
 export function ProfilePage() {
   const { user, updateUser } = useAuth();
   const { preferences, setPreferences } = useMatch();
   const { showToast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Form local state
   const [formData, setFormData] = useState({
@@ -60,7 +59,7 @@ export function ProfilePage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
 
     // Validation
@@ -69,35 +68,51 @@ export function ProfilePage() {
       return;
     }
 
-    // Update user in AuthContext
-    updateUser({
-      name: formData.name,
-      college: formData.college,
-      course: formData.course,
-      city: formData.city,
-      age: Number(formData.age),
-      bio: formData.bio,
-    });
+    setSaving(true);
+    try {
+      const userUpdates = {
+        name: formData.name.trim(),
+        college: formData.college.trim(),
+        course: formData.course.trim(),
+        city: formData.city.trim(),
+        bio: formData.bio.trim(),
+      };
 
-    // Update preferences in MatchContext
-    setPreferences((prev) => ({
-      ...prev,
-      budget: formData.budget,
-      sleepSchedule: formData.sleepSchedule,
-      wakeUpSchedule: formData.wakeUpSchedule,
-      cleanliness: formData.cleanliness,
-      foodPreference: formData.foodPreference,
-      noisePreference: formData.noisePreference,
-      studyHabit: formData.studyHabit,
-      socialLevel: formData.socialLevel,
-      smokingPreference: formData.smokingPreference,
-      guestPreference: formData.guestPreference,
-      preferredLocation: formData.preferredLocation,
-    }));
+      const prefUpdates = {
+        budget: formData.budget,
+        sleepSchedule: formData.sleepSchedule,
+        wakeUpSchedule: formData.wakeUpSchedule,
+        cleanliness: formData.cleanliness,
+        foodPreference: formData.foodPreference,
+        noisePreference: formData.noisePreference,
+        studyHabit: formData.studyHabit,
+        socialLevel: formData.socialLevel,
+        smokingPreference: formData.smokingPreference,
+        guestPreference: formData.guestPreference,
+        preferredLocation: formData.preferredLocation,
+      };
 
-    setIsEditing(false);
-    showToast('Profile and preferences updated successfully!', 'success');
+      const [userRes, prefRes] = await Promise.all([
+        userService.updateMyProfile(userUpdates),
+        preferenceService.updateMyPreferences(prefUpdates),
+      ]);
+
+      if (userRes.data?.user) {
+        updateUser(userRes.data.user);
+      }
+      if (prefRes.data?.preferences) {
+        setPreferences(prefRes.data.preferences);
+      }
+
+      setIsEditing(false);
+      showToast('Profile and preferences updated successfully in database!', 'success');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to update profile', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   const handleCancel = () => {
     // Reset back to saved values
@@ -407,7 +422,7 @@ export function ProfilePage() {
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" loading={saving}>
               Save Changes
             </Button>
           </div>

@@ -249,9 +249,19 @@ export function QuestionnairePage() {
     }
   };
 
-  const handleSubmit = () => {
-    submitQuestionnaire(answers);
-    setIsCompleted(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await submitQuestionnaire(answers);
+      setIsCompleted(true);
+      showToast('Lifestyle preferences saved successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to save questionnaire. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (isCompleted) {
@@ -403,6 +413,7 @@ export function QuestionnairePage() {
 
           <Button
             onClick={handleNext}
+            loading={submitting}
             className="gap-2"
           >
             <span>{currentStep === totalSteps - 1 ? 'Save & Calculate Matches' : 'Next Step'}</span>

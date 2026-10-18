@@ -64,7 +64,7 @@ export function SettingsPage() {
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-150">
       <PageHeader
         title="Settings & Preferences"
-        subtitle="Manage account details, notification frequencies, and mock session state."
+        subtitle="Manage account details, notification preferences, and active student session."
       />
 
       {/* Account Info Card */}
@@ -98,7 +98,7 @@ export function SettingsPage() {
       <Card className="p-6 sm:p-8 space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-wider text-charcoal flex items-center gap-2 pb-3 border-b border-stone-100">
           <Bell className="w-4 h-4 text-brand-600" />
-          Notification Preferences (Mock UI)
+          Notification Preferences
         </h3>
 
         <div className="space-y-3.5">
@@ -133,7 +133,7 @@ export function SettingsPage() {
       <Card className="p-6 sm:p-8 space-y-4">
         <h3 className="text-sm font-bold uppercase tracking-wider text-charcoal flex items-center gap-2 pb-3 border-b border-stone-100">
           <Shield className="w-4 h-4 text-brand-600" />
-          Privacy & Visibility Controls (Mock UI)
+          Privacy & Visibility Controls
         </h3>
 
         <div className="space-y-3.5">
@@ -158,7 +158,7 @@ export function SettingsPage() {
           <div>
             <h4 className="font-bold text-sm text-rose-900">Sign Out of Session</h4>
             <p className="text-xs text-rose-700/80 mt-0.5">
-              Clears active demonstration session state and returns to the public landing page.
+              Securely ends your authenticated session and clears credentials on this machine.
             </p>
           </div>
           <Button
@@ -182,7 +182,7 @@ export function SettingsPage() {
       >
         <div className="space-y-4 pt-2">
           <p className="text-xs text-stone-600">
-            This will reset the active demo session and return you to the NestMatch homepage. Any mock profile edits or questionnaire updates are preserved during active browser runtime.
+            This will log you out of your account on this device. Your profile, questionnaire answers, roommate requests, and conversations will remain safely persisted on the server.
           </p>
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-100">
             <Button

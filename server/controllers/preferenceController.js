@@ -61,6 +61,15 @@ export const updateMyPreferences = asyncHandler(async (req, res) => {
   ];
 
   const updates = {};
+
+  // Alias mappings from alternate client representations
+  if (req.body.noiseTolerance !== undefined && req.body.noisePreference === undefined) {
+    updates.noisePreference = req.body.noiseTolerance;
+  }
+  if (req.body.socialHabit !== undefined && req.body.socialLevel === undefined) {
+    updates.socialLevel = req.body.socialHabit;
+  }
+
   allowedFields.forEach((field) => {
     if (req.body[field] !== undefined) {
       updates[field] = req.body[field];

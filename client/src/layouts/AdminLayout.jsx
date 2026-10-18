@@ -5,18 +5,22 @@ import {
   AlertTriangle,
   LayoutDashboard,
   ArrowLeft,
-  Home,
+  LogOut,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 
 export function AdminLayout() {
-  const { switchDemoRole } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleReturnToStudent = () => {
-    switchDemoRole('student');
     navigate('/dashboard');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   const navLinks = [
@@ -27,21 +31,31 @@ export function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-stone-100 flex flex-col">
-      {/* Admin Demo Warning Bar */}
+      {/* Admin Session Bar */}
       <div className="bg-charcoal text-stone-200 px-4 py-2 text-xs flex items-center justify-between border-b border-stone-800">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
           <span className="font-semibold text-white">NestMatch Administrative Console</span>
-          <span className="hidden sm:inline text-stone-400">— Interactive Demonstration Mode (Phase 1 UI)</span>
+          <span className="hidden sm:inline text-stone-400">— Authenticated as {user?.email || 'Administrator'}</span>
         </div>
-        <button
-          onClick={handleReturnToStudent}
-          className="text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1 transition"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Return to Student View
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleReturnToStudent}
+            className="text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1 transition"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Student Portal
+          </button>
+          <button
+            onClick={handleLogout}
+            className="text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 transition"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign Out
+          </button>
+        </div>
       </div>
+
 
       {/* Admin Header & Nav */}
       <header className="bg-white border-b border-stone-200 sticky top-0 z-30 shadow-subtle">
