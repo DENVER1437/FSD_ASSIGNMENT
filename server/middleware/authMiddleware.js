@@ -16,6 +16,7 @@ export const protect = async (req, res, next) => {
 
   if (!token) {
     return res.status(401).json({
+      success: false,
       status: 'error',
       message: 'Authentication required. Please provide a valid Bearer token.',
     });
@@ -27,6 +28,7 @@ export const protect = async (req, res, next) => {
 
     if (!user) {
       return res.status(401).json({
+        success: false,
         status: 'error',
         message: 'The user belonging to this token no longer exists.',
       });
@@ -34,6 +36,7 @@ export const protect = async (req, res, next) => {
 
     if (user.status === 'suspended') {
       return res.status(403).json({
+        success: false,
         status: 'error',
         message: 'Your account has been suspended. Please contact support.',
       });
@@ -43,6 +46,7 @@ export const protect = async (req, res, next) => {
     next();
   } catch (error) {
     return res.status(401).json({
+      success: false,
       status: 'error',
       message: 'Invalid or expired authentication token. Please log in again.',
     });
@@ -57,6 +61,7 @@ export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
+        success: false,
         status: 'error',
         message: `Forbidden: role '${req.user?.role || 'guest'}' does not have permission to access this resource.`,
       });

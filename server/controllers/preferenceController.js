@@ -2,6 +2,7 @@ import { Preference } from '../models/Preference.js';
 import { User } from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
+import { checkProfileCompleteness } from './userController.js';
 
 /**
  * @desc    Get current user's lifestyle questionnaire responses
@@ -82,8 +83,12 @@ export const updateMyPreferences = asyncHandler(async (req, res) => {
     { new: true, upsert: true, runValidators: true }
   );
 
-  // Update user profile status
-  await User.findByIdAndUpdate(req.user._id, { isProfileComplete: true });
+  // Update user profile status accurately using authoritative completeness evaluator
+  const user = await User.findById(req.user._id);
+  if (user) {
+    user.isProfileComplete = checkProfileCompleteness(user);
+    await user.save();
+  }
 
   return sendSuccess(res, { preferences }, 'Lifestyle questionnaire saved successfully');
 });

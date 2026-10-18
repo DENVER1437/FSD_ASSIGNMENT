@@ -296,7 +296,7 @@
 ### 2.6 Roommate Requests (`/api/requests`)
 
 #### `POST /api/requests`
-- **Description**: Sends a roommate request to a candidate student.
+- **Description**: Sends a roommate request to a candidate student with concurrency protection.
 - **Auth**: Private (`protect`)
 - **Request Body**:
   ```json
@@ -309,32 +309,43 @@
   ```json
   {
     "success": true,
-    "message": "Roommate request sent successfully",
+    "message": "Roommate request sent to Jordan Lee!",
     "data": {
       "request": {
         "id": "67b3f9...",
         "senderId": "67b3f1...",
         "receiverId": "67b3f2...",
-        "status": "pending"
+        "status": "pending",
+        "message": "Hi Jordan! Loved your profile, let's explore a flat near campus.",
+        "createdAt": "2026-10-18T10:30:00.000Z"
       }
     }
   }
   ```
+- **Error Responses**:
+  - `400 Bad Request`: Missing `receiverId`, target is self (`senderId === receiverId`), or invalid target.
+  - `404 Not Found`: Target student does not exist or is suspended.
+  - `409 Conflict`: Active request already pending or accepted between this pair (evaluated bidirectionally).
 
 #### `GET /api/requests/received`
-- **Description**: Retrieves list of pending received requests.
+- **Description**: Retrieves list of incoming roommate requests for current student.
 - **Auth**: Private (`protect`)
 
 #### `GET /api/requests/sent`
-- **Description**: Retrieves list of pending sent requests.
+- **Description**: Retrieves list of outgoing roommate requests dispatched by current student.
 - **Auth**: Private (`protect`)
 
 #### `PUT /api/requests/:id/accept`
-- **Description**: Accepts an incoming request; unlocks direct messaging between the two students.
+- **Description**: Accepts an incoming request; unlocks direct messaging between the two students. Uses atomic `findOneAndUpdate` conditioned on `receiverId === req.user._id && status === 'pending'`.
 - **Auth**: Private (`protect`)
+- **Consistency Guarantee**: Atomically marks request as `accepted`. Seeds welcome system message as an isolated recoverable operation.
+- **Error Responses**:
+  - `403 Forbidden`: Authenticated user is not the intended recipient.
+  - `400 Bad Request`: Request already accepted, previously rejected, or invalid state.
+  - `404 Not Found`: Request ID not found.
 
 #### `PUT /api/requests/:id/reject`
-- **Description**: Declines an incoming request.
+- **Description**: Declines an incoming request. Resets `activePairKey: null` so valid future requests are not permanently blocked.
 - **Auth**: Private (`protect`)
 
 #### `DELETE /api/requests/:id`
@@ -346,21 +357,21 @@
 ### 2.7 Direct Messaging (`/api/messages`)
 
 #### `GET /api/messages/conversations`
-- **Description**: Lists active conversation threads (requires an accepted request).
+- **Description**: Lists active conversation threads (requires an accepted request). Uses MongoDB aggregation pipeline (`Message.aggregate`) to count unread messages without N+1 query overhead.
 - **Auth**: Private (`protect`)
 
 #### `GET /api/messages/:userId`
-- **Description**: Retrieves message history with a connected roommate.
+- **Description**: Retrieves message history with a connected roommate in stable chronological order. Marks messages as read for authenticated recipient.
 - **Auth**: Private (`protect`)
 
 #### `POST /api/messages`
-- **Description**: Sends a message to an accepted connection.
+- **Description**: Sends a message to an accepted connection. Validates non-empty string and max length ($\le 1000$ chars). Sender identity derived strictly from authenticated token (`req.user._id`).
 - **Auth**: Private (`protect`)
 - **Request Body**:
   ```json
   {
     "receiverId": "67b3f2...",
-    "content": "Hey! Did you check out the 2BHK flat listing on Beacon St?"
+    "message": "Hey! Did you check out the 2BHK flat listing on Beacon St?"
   }
   ```
 
@@ -371,38 +382,42 @@
 *All administrative endpoints require `authorize('admin')` role check.*
 
 #### `GET /api/admin/metrics`
-- **Description**: Platform summary statistics.
-- **Auth**: Admin Private
-- **Response `200 OK`**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "metrics": {
-        "totalUsers": 6,
-        "activeStudents": 5,
-        "suspendedUsers": 0,
-        "totalRequests": 3,
-        "acceptedConnections": 1,
-        "pendingReports": 2
-      }
-    }
-  }
-  ```
+- **Description**: Real-time platform summary statistics and counts.
+- **Auth**: Admin Private (`protect`, `authorize('admin')`)
 
 #### `GET /api/admin/users`
-- **Description**: Paginated student user directory.
-- **Auth**: Admin Private
+- **Description**: Paginated and searchable student user directory.
+- **Auth**: Admin Private (`protect`, `authorize('admin')`)
+- **Query Parameters**:
+  - `search` (string): Safe regex search against `name`, `email`, `college` (escaped via `escapeRegex` to prevent ReDoS).
+  - `role` (`all` | `student` | `admin`)
+  - `status` (`all` | `active` | `suspended`)
+  - `page` (integer $\ge 1$, default 1)
+  - `limit` (integer between 1 and 100, default 20)
+- **Validation**: Rejects invalid numeric values and excessive page sizes ($> 100$) with `400 Bad Request`.
 
 #### `PUT /api/admin/users/:id/status`
-- **Description**: Toggles student account status (`active` | `suspended`).
-- **Auth**: Admin Private
+- **Description**: Toggles student account status (`active` | `suspended`). Administrators cannot suspend their own account.
+- **Auth**: Admin Private (`protect`, `authorize('admin')`)
 - **Request Body**: `{ "status": "suspended" }`
 
-#### `GET /api/admin/reports`
-- **Description**: List student safety reports.
-- **Auth**: Admin Private
+#### `DELETE /api/admin/users/:id`
+- **Description**: Deletes student account and cascades removal of preferences, requests, and messages. Prevents self-deletion.
+- **Auth**: Admin Private (`protect`, `authorize('admin')`)
 
-#### `PUT /api/admin/reports/:id/status`
-- **Description**: Updates report status (`investigating` | `resolved` | `dismissed`).
-- **Auth**: Admin Private
+#### `GET /api/admin/reports`
+- **Description**: Lists safety moderation reports. Supports filtering by `status` (`open`, `investigating`, `resolved`, `dismissed`).
+- **Auth**: Admin Private (`protect`, `authorize('admin')`)
+- **Validation**: Rejects invalid status query filter with `400 Bad Request`.
+
+#### `PUT /api/admin/reports/:id`
+- **Description**: Updates report status or executes moderation action (`suspend_user` | `dismiss`).
+- **Auth**: Admin Private (`protect`, `authorize('admin')`)
+- **Request Body**:
+  ```json
+  {
+    "status": "resolved",
+    "action": "suspend_user",
+    "adminNotes": "Account suspended following violation review."
+  }
+  ```

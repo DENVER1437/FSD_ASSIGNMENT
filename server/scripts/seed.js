@@ -6,10 +6,67 @@ import { connectDB, disconnectDB } from '../config/db.js';
 
 dotenv.config();
 
+/**
+ * Validates whether destructive seeding is permitted.
+ * Blocks production execution and requires explicit confirmation.
+ */
+export const canRunDestructiveSeed = ({
+  nodeEnv = process.env.NODE_ENV,
+  confirmReset = process.env.CONFIRM_SEED_RESET,
+  cliArgs = process.argv.slice(2),
+  mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || '',
+} = {}) => {
+  // 1. Refuse in production
+  if (nodeEnv === 'production') {
+    return {
+      allowed: false,
+      reason: 'CRITICAL SAFETY BLOCK: Database seeding is strictly forbidden when NODE_ENV is set to "production".',
+    };
+  }
+
+  // 2. Explicit confirmation required
+  const hasConfirmFlag = cliArgs.includes('--confirm') || cliArgs.includes('--force');
+  const hasEnvConfirm = confirmReset === 'true' || confirmReset === '1';
+
+  if (!hasConfirmFlag && !hasEnvConfirm) {
+    return {
+      allowed: false,
+      reason: 'SAFETY GUARD: Destructive seeding requires explicit confirmation. Set CONFIRM_SEED_RESET=true or pass --confirm CLI flag.',
+    };
+  }
+
+  // 3. Database URI validation: Ensure it targets a local/test/dev database
+  const normalizedUri = (mongoUri || '').toLowerCase();
+  const isApprovedTarget =
+    normalizedUri.includes('localhost') ||
+    normalizedUri.includes('127.0.0.1') ||
+    normalizedUri.includes('test') ||
+    normalizedUri.includes('dev') ||
+    normalizedUri.includes('nestmatch');
+
+  if (!isApprovedTarget) {
+    return {
+      allowed: false,
+      reason: 'SAFETY GUARD: Target database connection does not identify an approved local/development/test database.',
+    };
+  }
+
+  return { allowed: true };
+};
+
 const seedDatabase = async () => {
   try {
+    const guard = canRunDestructiveSeed();
+    if (!guard.allowed) {
+      console.error(`\n[Seed Aborted]: ${guard.reason}`);
+      console.error('Safe Usage (Development Only):');
+      console.error('  CONFIRM_SEED_RESET=true node scripts/seed.js');
+      console.error('  or: npm run seed -- --confirm\n');
+      process.exit(1);
+    }
+
     await connectDB();
-    console.log('[Seed] Connected to MongoDB. Clearing existing collections...');
+    console.log('[Seed] Connected to authorized development database. Proceeding with demo seed...');
 
     // Clear collections
     await Promise.all([
@@ -314,8 +371,16 @@ const seedDatabase = async () => {
     process.exit(0);
   } catch (error) {
     console.error('[Seed Error]:', error);
-    process.exit(1);
   }
 };
 
-seedDatabase();
+export { seedDatabase };
+
+// Only run automatically when executed directly from CLI
+const isDirectExecution =
+  process.argv[1] &&
+  (process.argv[1].endsWith('seed.js') || process.argv[1].endsWith('seed'));
+
+if (isDirectExecution) {
+  seedDatabase();
+}

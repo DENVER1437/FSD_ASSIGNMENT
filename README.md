@@ -2,7 +2,7 @@
 
 [![Status](https://img.shields.io/badge/Status-Fully%20Integrated%20%26%20Verified-success)](#development-roadmap)
 [![Stack](https://img.shields.io/badge/Stack-MERN%20(React%20%2B%20Express%20%2B%20MongoDB)-blue)](#technology-stack)
-[![Tests](https://img.shields.io/badge/Tests-21%2F21%20Passing-brightgreen)](#automated-testing--qa)
+[![Tests](https://img.shields.io/badge/Tests-48%2F48%20Passing-brightgreen)](#automated-testing--qa)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
@@ -228,14 +228,13 @@ cd server
 npm test
 ```
 This single command executes:
-1. **Unit Test Suite** (`node --test tests/*.test.js`):
-   - Identical preferences matching test
-   - Missing preferences handling test
-   - Conflicting preferences test
-   - Partial compatibility test
-   - Budget penalty validation test
-   - Boundary normalization test [0, 100]
-2. **Integration Verification Suite** (`node tests/verifyApi.js`):
+1. **Unit Test Suite** (`node --test tests/*.test.js` - **26 PASS**):
+   - JWT security: missing secret error, valid token sign/verify, invalid signature rejection, expired token rejection, malformed token rejection, startup validation
+   - Matching algorithm: identical preferences 100%, missing preferences handling, incomplete questionnaire partial evaluation, conflicting preferences, partial compatibility, budget distance penalties, self-match exclusion, score normalization [0, 100], dynamic preference updates
+   - Profile completeness: empty profile incomplete, populated profile complete, transition on clearing field, short bio check
+   - Request model: self-request hook rejection, deterministic activePairKey computation, nullification on rejection
+   - Seed safety guard: rejection in production, rejection without confirmation, rejection on unapproved DBs, execution on dev DB with confirmation
+2. **Integration Verification Suite** (`node tests/verifyApi.js` - **22 PASS**):
    - Health and Database readiness verification
    - Registration validation and duplicate account rejection
    - Password hashing and authentication verification
@@ -243,9 +242,16 @@ This single command executes:
    - Profile update and persistence verification
    - Preferences CRUD and questionnaire persistence
    - Algorithmic compatibility calculation
-   - Request dispatching, acceptance, and state transitions
+   - Roommate request workflow (sent, received, status)
    - Conversation listing and message permissions
-   - Admin RBAC enforcement (student gets 403 Forbidden)
+   - Admin metrics and RBAC enforcement (student gets 403 Forbidden)
+   - Admin search safe regex escaping (preventing ReDoS on special characters)
+   - Admin pagination limits (rejects negative page and excessive limit > 100)
+   - Admin report status filter validation
+   - Self-request prevention (400 Bad Request)
+   - Duplicate active roommate request prevention (409 Conflict)
+   - Request acceptance receiver authorization and idempotence
+   - Profile completeness dynamic transitions (complete -> incomplete -> complete)
 
 ### Frontend Build & Lint Verification
 ```bash
@@ -307,7 +313,7 @@ npm run lint     # Validates static analysis with Oxlint
 | **How are passwords secured?** | We use `bcryptjs` in `server/models/User.js`. When a user registers or updates their password, a pre-save hook checks `isModified('password')` and hashes the plaintext password with 10 salt rounds. Plaintext is never saved. |
 | **How does stateless JWT authentication work?** | Upon valid login, `server/utils/jwt.js` signs a JSON Web Token containing `userId` and `role` using HMAC-SHA256 with a secret key. The client includes this token in subsequent requests. `authMiddleware.js` extracts and verifies the token with `jwt.verify()`. |
 | **How is Role-Based Access Control (RBAC) enforced?** | The backend middleware `authorize('admin')` in `server/middleware/authMiddleware.js` checks `req.user.role === 'admin'`. If a non-admin student attempts to call `/api/admin/metrics`, the server returns `403 Forbidden` regardless of client state. |
-| **How does the matching formula handle incomplete data?** | `server/services/matchingService.js` provides default baselines for every factor. If a student has not declared a specific habit, the factor assigns a neutral baseline score (typically 50%) rather than inflating the compatibility or throwing a runtime `TypeError`. |
+| **How does the matching formula handle incomplete data?** | `server/services/matchingService.js` performs partial profile evaluation: it evaluates only the factors declared by both students, aggregates their defined weights ($\sum W_i$), and normalizes the score strictly by the applicable weight ($(\text{weightedPoints} / \text{applicableWeight}) \times 100$). Unspecified categories are explicitly marked as `'Not Specified'` (`isEvaluated: false`) with an `isPartial: true` indicator, preventing artificial inflation of incomplete profiles while maintaining explainability. |
 | **Why is messaging restricted to accepted connections?** | To ensure student domestic safety and prevent unsolicited spam, `server/controllers/messageController.js` queries the `Request` collection to confirm an `accepted` request exists between `senderId` and `recipientId` before permitting any message insertion. |
 
 ---

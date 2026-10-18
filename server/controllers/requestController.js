@@ -45,12 +45,25 @@ export const sendRequest = asyncHandler(async (req, res) => {
     );
   }
 
-  const newRequest = await Request.create({
-    senderId,
-    receiverId,
-    message: message || 'Hey! Saw our high compatibility score on NestMatch. Would love to connect!',
-    status: 'pending',
-  });
+  let newRequest;
+  try {
+    newRequest = await Request.create({
+      senderId,
+      receiverId,
+      message: message || 'Hey! Saw our high compatibility score on NestMatch. Would love to connect!',
+      status: 'pending',
+      activePairKey: [senderId.toString(), receiverId.toString()].sort().join(':'),
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return sendError(
+        res,
+        'An active roommate request already exists between you and this student.',
+        409
+      );
+    }
+    throw err;
+  }
 
   const populated = await Request.findById(newRequest._id)
     .populate('receiverId', 'name email college city course profileImage');
@@ -127,37 +140,55 @@ export const getSentRequests = asyncHandler(async (req, res) => {
  * @access  Private (JWT)
  */
 export const acceptRequest = asyncHandler(async (req, res) => {
-  const request = await Request.findById(req.params.id)
+  // Atomic update: only a pending request addressed to this receiver can be accepted
+  const request = await Request.findOneAndUpdate(
+    {
+      _id: req.params.id,
+      receiverId: req.user._id,
+      status: 'pending',
+    },
+    {
+      $set: { status: 'accepted' },
+    },
+    { new: true }
+  )
     .populate('senderId', 'name profileImage college')
     .populate('receiverId', 'name profileImage college');
 
   if (!request) {
-    return sendError(res, 'Request not found', 404);
+    const existing = await Request.findById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Request not found', 404);
+    }
+    if (existing.receiverId.toString() !== req.user._id.toString()) {
+      return sendError(res, 'You are not authorized to accept this request', 403);
+    }
+    if (existing.status === 'accepted') {
+      return sendError(res, 'Request is already accepted', 400);
+    }
+    if (existing.status === 'rejected') {
+      return sendError(res, 'Cannot accept a declined request', 400);
+    }
+    return sendError(res, `Cannot accept request with status '${existing.status}'`, 400);
   }
 
-  // Only the receiver can accept
-  if (request.receiverId._id.toString() !== req.user._id.toString()) {
-    return sendError(res, 'You are not authorized to accept this request', 403);
+  // Seed welcome system message into the conversation thread (recoverable operation)
+  let welcomeMessageCreated = false;
+  try {
+    await Message.create({
+      senderId: request.receiverId._id,
+      receiverId: request.senderId._id,
+      message: `🤝 Connected! Roommate request accepted by ${req.user.name}. You can now message each other directly.`,
+      isSystem: true,
+    });
+    welcomeMessageCreated = true;
+  } catch (msgErr) {
+    console.warn('[RequestController] Welcome message non-critical creation failure:', msgErr.message);
   }
-
-  if (request.status === 'accepted') {
-    return sendError(res, 'Request is already accepted', 400);
-  }
-
-  request.status = 'accepted';
-  await request.save();
-
-  // Automatically seed initial system welcome message into the thread
-  await Message.create({
-    senderId: request.receiverId._id,
-    receiverId: request.senderId._id,
-    message: `🤝 Connected! Roommate request accepted by ${req.user.name}. You can now message each other directly.`,
-    isSystem: true,
-  });
 
   return sendSuccess(
     res,
-    { request },
+    { request, welcomeMessageCreated },
     `Accepted roommate request from ${request.senderId.name}! Chat unlocked.`
   );
 });
@@ -168,18 +199,35 @@ export const acceptRequest = asyncHandler(async (req, res) => {
  * @access  Private (JWT)
  */
 export const rejectRequest = asyncHandler(async (req, res) => {
-  const request = await Request.findById(req.params.id);
+  // Atomic update: only pending request addressed to this receiver can be rejected
+  const request = await Request.findOneAndUpdate(
+    {
+      _id: req.params.id,
+      receiverId: req.user._id,
+      status: 'pending',
+    },
+    {
+      $set: {
+        status: 'rejected',
+        activePairKey: null, // Release unique pair constraint so valid future requests are allowed
+      },
+    },
+    { new: true }
+  );
 
   if (!request) {
-    return sendError(res, 'Request not found', 404);
+    const existing = await Request.findById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Request not found', 404);
+    }
+    if (existing.receiverId.toString() !== req.user._id.toString()) {
+      return sendError(res, 'You are not authorized to reject this request', 403);
+    }
+    if (existing.status === 'rejected') {
+      return sendError(res, 'Request is already rejected', 400);
+    }
+    return sendError(res, `Cannot decline request with status '${existing.status}'`, 400);
   }
-
-  if (request.receiverId.toString() !== req.user._id.toString()) {
-    return sendError(res, 'You are not authorized to reject this request', 403);
-  }
-
-  request.status = 'rejected';
-  await request.save();
 
   return sendSuccess(res, { request }, 'Roommate request declined');
 });
@@ -190,17 +238,26 @@ export const rejectRequest = asyncHandler(async (req, res) => {
  * @access  Private (JWT)
  */
 export const cancelRequest = asyncHandler(async (req, res) => {
-  const request = await Request.findById(req.params.id);
+  // Atomic delete: only pending request sent by this student can be cancelled
+  const request = await Request.findOneAndDelete({
+    _id: req.params.id,
+    senderId: req.user._id,
+    status: 'pending',
+  });
 
   if (!request) {
-    return sendError(res, 'Request not found', 404);
+    const existing = await Request.findById(req.params.id);
+    if (!existing) {
+      return sendError(res, 'Request not found', 404);
+    }
+    if (existing.senderId.toString() !== req.user._id.toString()) {
+      return sendError(res, 'You are not authorized to cancel this request', 403);
+    }
+    if (existing.status === 'accepted') {
+      return sendError(res, 'Cannot cancel an already accepted connection', 400);
+    }
+    return sendError(res, `Cannot cancel request with status '${existing.status}'`, 400);
   }
-
-  if (request.senderId.toString() !== req.user._id.toString()) {
-    return sendError(res, 'You are not authorized to cancel this request', 403);
-  }
-
-  await Request.findByIdAndDelete(req.params.id);
 
   return sendSuccess(res, null, 'Roommate request canceled');
 });

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateCompatibility } from '../services/matchingService.js';
+import { calculateCompatibility, scoreBudget } from '../services/matchingService.js';
 
-test('Matching Algorithm - Identical Preferences yield 100% score', () => {
+test('Matching Algorithm - Identical Complete Preferences yield 100% score', () => {
   const pref = {
     sleepSchedule: 'night_owl',
     wakeUpSchedule: 'after_9am',
@@ -13,25 +13,63 @@ test('Matching Algorithm - Identical Preferences yield 100% score', () => {
     studyHabit: 'in_room_quiet',
     socialLevel: 'ambivert',
     smokingPreference: 'strictly_non_smoker',
-    guestPreference: 'occasional_guests',
   };
 
-  const result = calculateCompatibility(pref, pref, { college: 'Apex Tech' }, { college: 'Apex Tech' });
+  const result = calculateCompatibility(
+    pref,
+    pref,
+    { id: 'user_1', college: 'Apex Tech' },
+    { id: 'user_2', college: 'Apex Tech' }
+  );
+
   assert.equal(result.score, 100);
   assert.equal(result.compatibilityLevel, 'Exceptional Match');
-  assert.ok(result.categoryBreakdown.length > 0);
+  assert.equal(result.isPartial, false);
+  assert.equal(result.evaluatedWeight, 100);
+  assert.ok(result.categoryBreakdown.length === 8);
   assert.ok(result.commonPreferences.length > 0);
 });
 
-test('Matching Algorithm - Missing preferences handle gracefully without crashing or inflated score', () => {
+test('Matching Algorithm - Missing preferences handle gracefully without artificial inflation', () => {
+  // Completely null preferences
   const result1 = calculateCompatibility(null, null);
-  assert.equal(result1.score, 50);
+  assert.equal(result1.score, 0);
   assert.equal(result1.compatibilityLevel, 'Insufficient Data');
+  assert.equal(result1.evaluatedWeight, 0);
+  assert.equal(result1.isPartial, true);
 
+  // One profile has 1 question, the other has none
   const prefA = { sleepSchedule: 'night_owl' };
   const result2 = calculateCompatibility(prefA, null);
-  assert.equal(result2.score, 50);
+  assert.equal(result2.score, 0);
   assert.equal(result2.compatibilityLevel, 'Insufficient Data');
+  assert.equal(result2.evaluatedWeight, 0);
+});
+
+test('Matching Algorithm - Incomplete questionnaires evaluate available overlapping factors and flag partial status', () => {
+  // Both answered only sleep and cleanliness (20 + 15 = 35 weight)
+  const prefA = {
+    sleepSchedule: 'night_owl',
+    cleanliness: 'meticulous',
+  };
+  const prefB = {
+    sleepSchedule: 'night_owl',
+    cleanliness: 'meticulous',
+  };
+
+  const result = calculateCompatibility(prefA, prefB);
+  // Evaluated weight is 35 (< 50, so insufficient data overall)
+  assert.equal(result.evaluatedWeight, 35);
+  assert.equal(result.isPartial, true);
+  assert.equal(result.compatibilityLevel, 'Insufficient Data');
+  // But score on the factors they did answer is 100%
+  assert.equal(result.score, 100);
+
+  // Unanswered categories are marked as Not Specified
+  const budgetCat = result.categoryBreakdown.find((c) => c.name === 'Budget Alignment');
+  assert.ok(budgetCat);
+  assert.equal(budgetCat.isEvaluated, false);
+  assert.equal(budgetCat.status, 'Not Specified');
 });
 
 test('Matching Algorithm - Strongly conflicting preferences produce low score', () => {
@@ -60,12 +98,12 @@ test('Matching Algorithm - Strongly conflicting preferences produce low score', 
   };
 
   const result = calculateCompatibility(prefA, prefB);
-  assert.ok(result.score < 50, `Expected low score, got ${result.score}`);
+  assert.ok(result.score < 50, `Expected low score (<50), got ${result.score}`);
   assert.equal(result.compatibilityLevel, 'Low Compatibility');
   assert.ok(result.differences.length >= 3);
 });
 
-test('Matching Algorithm - Partial compatibility returns moderate or high score', () => {
+test('Matching Algorithm - Partial compatibility returns moderate score (70-90)', () => {
   const prefA = {
     sleepSchedule: 'night_owl',
     wakeUpSchedule: '7am_9am',
@@ -92,9 +130,17 @@ test('Matching Algorithm - Partial compatibility returns moderate or high score'
 
   const result = calculateCompatibility(prefA, prefB);
   assert.ok(result.score >= 70 && result.score <= 90, `Expected 70-90, got ${result.score}`);
+  assert.ok(['Strong Alignment', 'High Compatibility'].includes(result.compatibilityLevel));
 });
 
-test('Matching Algorithm - Budget distance penalties', () => {
+test('Matching Algorithm - Budget distance penalties: overlapping vs non-overlapping', () => {
+  // Test direct scoreBudget function
+  assert.equal(scoreBudget('5000-8000', '5000-8000'), 1.0); // Distance 0: Exact match
+  assert.equal(scoreBudget('5000-8000', '8000-12000'), 0.65); // Distance 1: Adjacent tier
+  assert.equal(scoreBudget('under_5000', '8000-12000'), 0.25); // Distance 2: Separated by 1 tier
+  assert.equal(scoreBudget('<5000', '12000+'), 0.0); // Distance 3: Maximum separation
+
+  // In matching flow
   const base = {
     sleepSchedule: 'flexible',
     wakeUpSchedule: '7am_9am',
@@ -106,38 +152,65 @@ test('Matching Algorithm - Budget distance penalties', () => {
     smokingPreference: 'strictly_non_smoker',
   };
 
-  // Same tier (0 diff)
-  const scoreSame = calculateCompatibility(
-    { ...base, budget: '5000-8000' },
-    { ...base, budget: '5000-8000' }
-  ).score;
+  const scoreExact = calculateCompatibility({ ...base, budget: '5000-8000' }, { ...base, budget: '5000-8000' }).score;
+  const scoreAdjacent = calculateCompatibility({ ...base, budget: '5000-8000' }, { ...base, budget: '8000-12000' }).score;
+  const scoreGap = calculateCompatibility({ ...base, budget: '<5000' }, { ...base, budget: '8000-12000' }).score;
+  const scoreExtreme = calculateCompatibility({ ...base, budget: '<5000' }, { ...base, budget: '12000+' }).score;
 
-  // Adjacent tier (1 diff)
-  const scoreAdjacent = calculateCompatibility(
-    { ...base, budget: '5000-8000' },
-    { ...base, budget: '8000-12000' }
-  ).score;
-
-  // Distant tier (2 diff)
-  const scoreFar = calculateCompatibility(
-    { ...base, budget: 'under_5000' },
-    { ...base, budget: '8000-12000' }
-  ).score;
-
-  // Extreme tier (3 diff)
-  const scoreOpposite = calculateCompatibility(
-    { ...base, budget: '<5000' },
-    { ...base, budget: '12000+' }
-  ).score;
-
-  assert.ok(scoreSame > scoreAdjacent, 'Same tier should score higher than adjacent tier');
-  assert.ok(scoreAdjacent > scoreFar, 'Adjacent tier should score higher than 2-step gap');
-  assert.ok(scoreFar > scoreOpposite, '2-step gap should score higher than maximum disparity');
+  assert.ok(scoreExact > scoreAdjacent);
+  assert.ok(scoreAdjacent > scoreGap);
+  assert.ok(scoreGap > scoreExtreme);
 });
 
-test('Matching Algorithm - Score normalized strictly within [0, 100]', () => {
+test('Matching Algorithm - Self-match exclusion returns zero compatibility', () => {
+  const pref = { sleepSchedule: 'night_owl', budget: '5000-8000' };
+  const user = { id: '67b3f1a2b3c4d5e6f7a8b9c0' };
+
+  const result = calculateCompatibility(pref, pref, user, user);
+  assert.equal(result.score, 0);
+  assert.equal(result.compatibilityLevel, 'Self Match');
+  assert.match(result.differences[0], /Cannot evaluate compatibility with yourself/);
+});
+
+test('Matching Algorithm - Score normalized strictly within [0, 100] without division-by-zero', () => {
   const emptyA = {};
   const emptyB = {};
   const result = calculateCompatibility(emptyA, emptyB);
   assert.ok(result.score >= 0 && result.score <= 100);
+  assert.ok(!isNaN(result.score));
+
+  // Invalid data values
+  const invalidA = { budget: 'unknown_currency', cleanliness: 'super_dirty' };
+  const invalidB = { budget: 'not_a_budget', cleanliness: 'unknown' };
+  const resultInvalid = calculateCompatibility(invalidA, invalidB);
+  assert.ok(resultInvalid.score >= 0 && resultInvalid.score <= 100);
+  assert.ok(!isNaN(resultInvalid.score));
+});
+
+test('Matching Algorithm - Changing preferences dynamically changes score', () => {
+  const prefStudent = {
+    sleepSchedule: 'early_bird',
+    budget: '<5000',
+    cleanliness: 'meticulous',
+    foodPreference: 'vegetarian',
+  };
+
+  const candidateA = {
+    sleepSchedule: 'early_bird',
+    budget: '<5000',
+    cleanliness: 'meticulous',
+    foodPreference: 'vegetarian',
+  };
+
+  const initialScore = calculateCompatibility(prefStudent, candidateA).score;
+
+  // Student updates budget and sleep
+  const updatedStudent = {
+    ...prefStudent,
+    sleepSchedule: 'night_owl',
+    budget: '12000+',
+  };
+
+  const updatedScore = calculateCompatibility(updatedStudent, candidateA).score;
+  assert.ok(initialScore > updatedScore, 'Score should drop when lifestyle preferences diverge');
 });

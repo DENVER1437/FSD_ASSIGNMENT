@@ -33,7 +33,13 @@ export const getConversations = asyncHandler(async (req, res) => {
     .populate('senderId', 'name email college city course profileImage status')
     .populate('receiverId', 'name email college city course profileImage status');
 
-  const conversations = [];
+  if (acceptedRequests.length === 0) {
+    return sendSuccess(res, { conversations: [] }, 'No conversations found');
+  }
+
+  // 2. Identify all unique connected partners
+  const partnerMap = new Map();
+  const otherUserIds = [];
 
   for (const reqRecord of acceptedRequests) {
     const isSender = reqRecord.senderId._id.toString() === currentUserId.toString();
@@ -41,26 +47,66 @@ export const getConversations = asyncHandler(async (req, res) => {
 
     if (!otherUser || otherUser.status === 'suspended') continue;
 
-    // Fetch last message in this thread
-    const lastMessage = await Message.findOne({
-      $or: [
-        { senderId: currentUserId, receiverId: otherUser._id },
-        { senderId: otherUser._id, receiverId: currentUserId },
-      ],
-    }).sort('-createdAt');
+    const otherIdStr = otherUser._id.toString();
+    if (!partnerMap.has(otherIdStr)) {
+      partnerMap.set(otherIdStr, otherUser);
+      otherUserIds.push(otherUser._id);
+    }
+  }
 
-    // Count unread
-    const unreadCount = await Message.countDocuments({
-      senderId: otherUser._id,
-      receiverId: currentUserId,
-      isRead: false,
-    });
+  if (otherUserIds.length === 0) {
+    return sendSuccess(res, { conversations: [] }, 'No active conversations found');
+  }
+
+  // 3. Batched aggregation for unread counts across all active conversations (avoids N+1 queries)
+  const unreadCounts = await Message.aggregate([
+    {
+      $match: {
+        receiverId: currentUserId,
+        senderId: { $in: otherUserIds },
+        isRead: false,
+      },
+    },
+    {
+      $group: {
+        _id: '$senderId',
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const unreadMap = new Map();
+  unreadCounts.forEach((u) => unreadMap.set(u._id.toString(), u.count));
+
+  // 4. Batched parallel query for latest message in each thread
+  const latestMessagePromises = otherUserIds.map((otherId) =>
+    Message.findOne({
+      $or: [
+        { senderId: currentUserId, receiverId: otherId },
+        { senderId: otherId, receiverId: currentUserId },
+      ],
+    }).sort('-createdAt')
+  );
+
+  const latestMessages = await Promise.all(latestMessagePromises);
+  const latestMsgMap = new Map();
+  otherUserIds.forEach((otherId, idx) => {
+    latestMsgMap.set(otherId.toString(), latestMessages[idx]);
+  });
+
+  // 5. Construct conversations list
+  const conversations = [];
+  for (const otherId of otherUserIds) {
+    const otherIdStr = otherId.toString();
+    const otherUser = partnerMap.get(otherIdStr);
+    const lastMessage = latestMsgMap.get(otherIdStr);
+    const unreadCount = unreadMap.get(otherIdStr) || 0;
 
     conversations.push({
-      id: `conv-${otherUser._id.toString()}`,
-      userId: otherUser._id.toString(),
+      id: `conv-${otherIdStr}`,
+      userId: otherIdStr,
       user: {
-        id: otherUser._id.toString(),
+        id: otherIdStr,
         name: otherUser.name,
         college: otherUser.college,
         course: otherUser.course,
@@ -103,7 +149,7 @@ export const getMessages = asyncHandler(async (req, res) => {
     ],
   }).sort('createdAt');
 
-  // Mark unread messages sent by otherUser as read
+  // Mark unread messages sent by otherUser as read (strictly restricted to recipient)
   await Message.updateMany(
     { senderId: otherUserId, receiverId: currentUserId, isRead: false },
     { $set: { isRead: true } }
@@ -130,8 +176,16 @@ export const sendMessage = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
   const { receiverId, message } = req.body;
 
-  if (!receiverId || !message || !message.trim()) {
-    return sendError(res, 'Receiver ID and non-empty message content are required', 400);
+  if (!receiverId || typeof receiverId !== 'string') {
+    return sendError(res, 'Valid receiver ID is required', 400);
+  }
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return sendError(res, 'Non-empty message content is required', 400);
+  }
+
+  if (message.trim().length > 1000) {
+    return sendError(res, 'Message cannot exceed 1000 characters', 400);
   }
 
   const isConnected = await verifyAcceptedConnection(currentUserId, receiverId);

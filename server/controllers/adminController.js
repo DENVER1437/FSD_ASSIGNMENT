@@ -48,6 +48,13 @@ export const getAdminDashboard = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Helper to safely escape regex special characters from user inputs
+ */
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
  * @desc    Get paginated and searchable user list
  * @route   GET /api/admin/users
  * @access  Private (Admin only)
@@ -56,20 +63,46 @@ export const getUsers = asyncHandler(async (req, res) => {
   const { search, role, status, page = 1, limit = 20 } = req.query;
   const query = {};
 
-  if (search && search.trim()) {
-    const q = search.trim();
+  if (search && typeof search === 'string' && search.trim()) {
+    const escaped = escapeRegex(search.trim());
     query.$or = [
-      { name: { $regex: q, $options: 'i' } },
-      { email: { $regex: q, $options: 'i' } },
-      { college: { $regex: q, $options: 'i' } },
+      { name: { $regex: escaped, $options: 'i' } },
+      { email: { $regex: escaped, $options: 'i' } },
+      { college: { $regex: escaped, $options: 'i' } },
     ];
   }
 
-  if (role && role !== 'all') query.role = role;
-  if (status && status !== 'all') query.status = status;
+  if (role && role !== 'all') {
+    if (!['student', 'admin'].includes(role)) {
+      return sendError(res, "Invalid role filter. Allowed values: 'student', 'admin'", 400);
+    }
+    query.role = role;
+  }
 
-  const pageNum = parseInt(page, 10) || 1;
-  const limitNum = parseInt(limit, 10) || 20;
+  if (status && status !== 'all') {
+    if (!['active', 'suspended'].includes(status)) {
+      return sendError(res, "Invalid status filter. Allowed values: 'active', 'suspended'", 400);
+    }
+    query.status = status;
+  }
+
+  const rawPage = Number(page);
+  const rawLimit = Number(limit);
+
+  if (isNaN(rawPage) || rawPage < 1) {
+    return sendError(res, 'Page parameter must be a positive integer greater than or equal to 1', 400);
+  }
+
+  if (isNaN(rawLimit) || rawLimit < 1) {
+    return sendError(res, 'Limit parameter must be a positive integer between 1 and 100', 400);
+  }
+
+  if (rawLimit > 100) {
+    return sendError(res, 'Limit parameter cannot exceed maximum of 100', 400);
+  }
+
+  const limitNum = Math.floor(rawLimit);
+  const pageNum = Math.floor(rawPage);
   const skip = (pageNum - 1) * limitNum;
 
   const [users, total] = await Promise.all([
@@ -160,7 +193,12 @@ export const deleteUser = asyncHandler(async (req, res) => {
 export const getReports = asyncHandler(async (req, res) => {
   const { status } = req.query;
   const filter = {};
+  const validStatuses = ['open', 'investigating', 'resolved', 'dismissed'];
+
   if (status && status !== 'all') {
+    if (!validStatuses.includes(status)) {
+      return sendError(res, `Invalid report status filter. Allowed values: ${validStatuses.join(', ')}`, 400);
+    }
     filter.status = status;
   }
 
@@ -179,6 +217,11 @@ export const getReports = asyncHandler(async (req, res) => {
  */
 export const updateReportStatus = asyncHandler(async (req, res) => {
   const { status, action, adminNotes } = req.body;
+  const validStatuses = ['open', 'investigating', 'resolved', 'dismissed'];
+
+  if (status && !validStatuses.includes(status)) {
+    return sendError(res, `Invalid report status. Allowed values: ${validStatuses.join(', ')}`, 400);
+  }
 
   const report = await Report.findById(req.params.id);
   if (!report) {
@@ -186,7 +229,7 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
   }
 
   if (status) report.status = status;
-  if (adminNotes) report.adminNotes = adminNotes;
+  if (adminNotes && typeof adminNotes === 'string') report.adminNotes = adminNotes.trim();
 
   // Execute moderation action if requested
   if (action === 'suspend_user') {

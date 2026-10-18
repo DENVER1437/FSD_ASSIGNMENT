@@ -95,15 +95,17 @@ Stores student identity, university credentials, profile details, and role autho
 | Field | Type | Required | Unique | Default | Description |
 |---|---|---|---|---|---|
 | `_id` | ObjectId | Yes (Auto) | Yes | Auto | Unique identifier |
-| `name` | String | Yes | No | - | Student's full name |
+| `name` | String | Yes | No | - | Student's full name (min 2 chars) |
 | `email` | String | Yes | Yes | - | University/Personal email address (lowercased) |
-| `password` | String | Yes | No | - | bcrypt salt-hashed password |
+| `password` | String | Yes | No | - | bcrypt salt-hashed password (salt round 10) |
 | `college` | String | Yes | No | - | Name of college / university |
 | `city` | String | Yes | No | - | City of study/residence |
 | `course` | String | Yes | No | - | Academic degree/branch (e.g., B.Tech CSE) |
 | `bio` | String | No | No | "" | Short bio about personality and hobbies |
 | `profileImage` | String | No | No | Default Avatar | URL to user avatar |
 | `role` | String | Yes | No | `"student"` | Enum: `['student', 'admin']` |
+| `status` | String | Yes | No | `"active"` | Enum: `['active', 'suspended']` |
+| `isProfileComplete`| Boolean | Yes | No | `false` | Dynamically calculated by `checkProfileCompleteness` |
 | `createdAt` | Date | Auto | No | `Date.now` | Account creation timestamp |
 | `updatedAt` | Date | Auto | No | `Date.now` | Last profile update timestamp |
 
@@ -129,19 +131,23 @@ Stores lifestyle choices collected from the compatibility questionnaire.
 | `updatedAt` | Date | Auto | Last preference update | `Date.now` |
 
 ### 3.3 `Request` Collection
-Manages peer-to-peer roommate requests and connection state transitions.
+Manages peer-to-peer roommate requests and connection state transitions with concurrency protection.
 
 | Field | Type | Constraints | Description |
 |---|---|---|---|
 | `_id` | ObjectId | Primary Key | Request identifier |
 | `senderId` | ObjectId (Ref: User) | Required | Student initiating the roommate request |
 | `receiverId` | ObjectId (Ref: User) | Required | Student receiving the request |
+| `message` | String | Optional | Introduction message |
 | `status` | String | Enum: `['pending', 'accepted', 'rejected']` | Current state of request (Default: `'pending'`) |
+| `activePairKey` | String | Indexed (Partial Unique) | Deterministic sorted pair key `[senderId, receiverId].sort().join(':')` for active states; `null` for rejected |
 | `createdAt` | Date | Auto | Submission timestamp |
 | `updatedAt` | Date | Auto | Transition timestamp |
 
-**Indexes**:
-- Compound Unique Index: `{ senderId: 1, receiverId: 1 }` prevents duplicate active requests.
+**Concurrency & Integrity Safeguards**:
+- **Partial Unique Index**: `{ activePairKey: 1 }` with `{ unique: true, partialFilterExpression: { activePairKey: { $type: 'string' } } }`.
+- **Pre-Validate Hook**: Rejects self-requests (`senderId === receiverId`); computes unordered pair key for `pending` and `accepted`; resets `activePairKey = null` on `rejected` so past rejections do not permanently block legitimate future requests.
+- **Controller-Level Catch**: Catches MongoDB error code 11000 and returns standard `409 Conflict`.
 
 ### 3.4 `Message` Collection
 Enables student communication after requests are mutually accepted.
@@ -151,8 +157,14 @@ Enables student communication after requests are mutually accepted.
 | `_id` | ObjectId | Primary Key | Message identifier |
 | `senderId` | ObjectId (Ref: User) | Required | Author of the message |
 | `receiverId` | ObjectId (Ref: User) | Required | Recipient student |
-| `message` | String | Required | Text body of the message |
+| `message` | String | Required, Max 1000 | Text body of the message |
+| `isRead` | Boolean | Default: false | Read status indicator |
+| `isSystem` | Boolean | Default: false | Flag for automated connection welcome messages |
 | `createdAt` | Date | Auto | Timestamp of delivery |
+
+**Indexes**:
+- Index `{ senderId: 1, receiverId: 1, createdAt: 1 }` for chronological thread loading.
+- Index `{ receiverId: 1, isRead: 1 }` for high-performance unread count aggregation.
 
 ### 3.5 `Match` Collection
 Stores computed compatibility snapshots and explainability breakdowns.
@@ -176,5 +188,7 @@ Tracks user grievances, policy violations, or inappropriate behavior for admin m
 | `reporterId` | ObjectId (Ref: User) | Required | Student submitting the report |
 | `reportedUserId` | ObjectId (Ref: User) | Required | Student being reported |
 | `reason` | String | Required | Detailed explanation of grievance |
-| `status` | String | Enum: `['pending', 'reviewed', 'resolved']` | Moderation state (Default: `'pending'`) |
+| `status` | String | Enum: `['open', 'investigating', 'resolved', 'dismissed']` | Moderation state (Default: `'open'`) |
+| `adminNotes` | String | Optional | Internal notes from administrator |
 | `createdAt` | Date | Auto | Filing timestamp |
+| `updatedAt` | Date | Auto | Moderation timestamp |

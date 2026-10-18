@@ -14,19 +14,17 @@ import adminRoutes from './routes/adminRoutes.js';
 
 // Middleware
 import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
+import { validateJwtConfig } from './utils/jwt.js';
 
 // Load environment variables
 dotenv.config();
 
+// Validate core configuration before handling requests
+validateJwtConfig();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-
-// Validate core configuration
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error('[FATAL CONFIG ERROR]: JWT_SECRET environment variable is missing in production.');
-  process.exit(1);
-}
 
 // Security & Parsing Middleware
 const clientUrls = (process.env.CLIENT_URL || '')
@@ -38,6 +36,8 @@ const allowedOrigins = [
   ...new Set([
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
     ...clientUrls,
   ]),
 ];
@@ -45,14 +45,20 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, postman)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else if (process.env.NODE_ENV !== 'production') {
-        callback(null, true); // Permissive in dev to avoid blocking testers
-      } else {
-        callback(new Error(`Blocked by CORS policy: ${origin}`));
+      // Allow requests with no origin (like mobile apps, server-to-server curl, verification scripts)
+      if (!origin) {
+        return callback(null, true);
       }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      if (process.env.NODE_ENV !== 'production') {
+        // In development, permit localhost variations
+        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+          return callback(null, true);
+        }
+      }
+      return callback(new Error(`Blocked by CORS policy: origin '${origin}' is not authorized.`));
     },
     credentials: true,
   })

@@ -1,17 +1,32 @@
 import jwt from 'jsonwebtoken';
 
 /**
- * Get JWT secret securely with production enforcement.
+ * Get JWT secret securely.
+ * Must be explicitly configured via process.env.JWT_SECRET.
+ * Fails safely if missing in any environment. Never silently uses a fallback secret.
  */
-const getSecret = () => {
+export const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: JWT_SECRET environment variable is missing in production.');
-    }
-    return 'nestmatch_dev_jwt_secret_key_2026_fsd';
+  if (!secret || typeof secret !== 'string' || secret.trim().length === 0) {
+    throw new Error('JWT configuration error: JWT_SECRET environment variable is missing or empty. Please set JWT_SECRET in your .env file.');
   }
-  return secret;
+  return secret.trim();
+};
+
+/**
+ * Validate JWT configuration during startup or tests.
+ */
+export const validateJwtConfig = () => {
+  try {
+    getJwtSecret();
+    return true;
+  } catch (err) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[FATAL CONFIG ERROR]:', err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
 };
 
 /**
@@ -21,12 +36,16 @@ const getSecret = () => {
  * @returns {string} Signed JWT token
  */
 export const generateToken = (userId, role = 'student') => {
-  const secret = getSecret();
+  if (!userId) {
+    throw new Error('Cannot sign JWT: userId is required');
+  }
+
+  const secret = getJwtSecret();
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
 
   return jwt.sign(
     {
-      id: userId,
+      id: userId.toString(),
       role,
     },
     secret,
@@ -42,7 +61,11 @@ export const generateToken = (userId, role = 'student') => {
  * @returns {object} Decoded token payload
  */
 export const verifyToken = (token) => {
-  const secret = getSecret();
+  if (!token || typeof token !== 'string') {
+    throw new Error('JWT verification error: No token provided or token is malformed.');
+  }
+
+  const secret = getJwtSecret();
   return jwt.verify(token, secret);
 };
 
