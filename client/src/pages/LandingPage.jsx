@@ -12,7 +12,6 @@ import {
   Check,
 } from 'lucide-react';
 import Navbar from '../layouts/Navbar';
-import Footer from '../layouts/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import ScoreBadge from '../components/ScoreBadge';
@@ -373,28 +372,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Call to Action Banner */}
-      <section className="py-16 bg-brand-900 text-white text-center">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Ready to find your ideal college roommate?
-          </h2>
-          <p className="text-brand-100 text-sm sm:text-base max-w-xl mx-auto">
-            Join students from your campus, take the lifestyle compatibility survey, and connect with respectful roommates.
-          </p>
-          <div className="pt-2">
-            <Button
-              size="lg"
-              onClick={() => navigate('/register')}
-              className="bg-white text-brand-900 hover:bg-brand-50 shadow-lg"
-            >
-              Get Started for Free
-            </Button>
-          </div>
-        </div>
-      </section>
 
-      <Footer />
     </div>
   );
 }
