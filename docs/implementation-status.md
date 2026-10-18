@@ -22,9 +22,13 @@ This document certifies the comprehensive audit, repair, integration, security h
 7. **CORS & Database Readiness**: Hardened origin verification in `server/server.js` using configured `allowedOrigins`. Database readiness probe (`/api/ready`) accurately checks `mongoose.connection.readyState === 1`.
 8. **Profile Completeness Authority**: Created authoritative `checkProfileCompleteness` in `server/controllers/userController.js`. Dynamically recalculates completeness upon every profile or questionnaire update, correctly handling transitions from incomplete $\to$ complete $\to$ incomplete.
 9. **Messaging Permissions & Query Optimization**: Verified sender identity is sourced from authenticated token; added `{ receiverId: 1, isRead: 1 }` index to `Message` collection; replaced N+1 conversation queries with batched aggregation (`Message.aggregate`) in `server/controllers/messageController.js`.
-10. **Automated Verification**:
+10. **Questionnaire Integrity & False Success Bug Fix**: Completely resolved the questionnaire false-success bug where API rejections were caught in context but still marked completed on the page. `submitQuestionnaire` now returns `{ success, message, preferences }`, and `QuestionnairePage.jsx` inspects the outcome, showing single toast notifications, keeping the form open on failure with a retry action, and enforcing required fields. Unanswered fields initialize as explicit empty states instead of silently fabricating default answers for new students. Selected options feature accessible checkmark indicators rather than relying on color alone.
+11. **Profile Age Persistence & Safe Partial Updates**: Added `age: { type: Number, min: 16, max: 99, default: null }` across the database model, controller whitelist, and profile form. Displayed student age in profile header. Coordinated profile and preference updates using `Promise.allSettled` with clear partial-success notifications, dirty-state tracking, and asynchronous hydration synchronization.
+12. **Settings Real Persistence**: Implemented `PUT /api/users/settings` with strict boolean validation. Persisted notification and privacy settings to authenticated user records, wired toggles with optimistic state and automatic rollback on failure, and explicitly disabled upcoming v2.0 features with honest explanatory labels.
+13. **Error vs Empty State Granularity**: Added explicit `matchesLoading`, `matchesError`, `requestsLoading`, and `requestsError` to separate loading, legitimate empty data, and network/server failures across all data-driven views. Added retry buttons. Replaced eager conversation message fetching with on-demand retrieval (`fetchMessagesForUser`). Removed fake "online" presence claims in chat.
+14. **Automated Verification**:
     - `node --test tests/*.test.js`: **26 / 26 PASS** (JWT security, matching accuracy, profile completeness, request model concurrency, seed safety guard).
-    - `node tests/verifyApi.js`: **22 / 22 PASS** (Full end-to-end REST API verification suite).
+    - `node tests/verifyApi.js`: **25 / 25 PASS** (Full end-to-end REST API verification suite including age boundaries, unrecorded null preferences, and settings persistence).
     - `npm run build` (client): **Vite build PASS** (Zero errors).
     - `npm run lint` (client): **Oxlint PASS** (Zero errors).
 
@@ -42,18 +46,19 @@ This document certifies the comprehensive audit, repair, integration, security h
 | **Auth** | Student & Admin Login | `POST /api/auth/login` | `/login` (`LoginPage.jsx`) | Verified (credential check, JWT issued) |
 | **Auth** | Current Session Hydration | `GET /api/auth/me` | `AuthContext.jsx` | Verified (user restored on page refresh) |
 | **Auth** | Secure Sign Out | `POST /api/auth/logout` | `SettingsPage.jsx` | Verified (clears token & state) |
-| **Profile** | Read & Update Student Profile | `GET /api/users/profile`, `PUT /api/users/profile` | `/profile` (`ProfilePage.jsx`) | Verified (persists to MongoDB, dynamic completeness) |
-| **Preferences** | Read & Update Questionnaire | `GET /api/preferences`, `PUT /api/preferences` | `/questionnaire` (`QuestionnairePage.jsx`) | Verified (15 parameters saved to MongoDB) |
-| **Matching** | Ranked Compatibility Feed | `GET /api/matches` | `/matches` (`MatchesPage.jsx`) | Verified (calculated from real preferences) |
+| **Profile** | Read & Update Student Profile | `GET /api/users/profile`, `PUT /api/users/profile` | `/profile` (`ProfilePage.jsx`) | Verified (persists name, age 16-99, college, city, course, bio; dynamic completeness) |
+| **Settings** | Persist Student Settings | `PUT /api/users/settings` | `/settings` (`SettingsPage.jsx`) | Verified (persists notification & privacy toggles, validates booleans) |
+| **Preferences** | Read & Update Questionnaire | `GET /api/preferences`, `PUT /api/preferences` | `/questionnaire` (`QuestionnairePage.jsx`) | Verified (15 parameters saved to MongoDB, null for new users, no false success) |
+| **Matching** | Ranked Compatibility Feed | `GET /api/matches` | `/matches` (`MatchesPage.jsx`) | Verified (calculated from real preferences, dynamic filters, loading/error retry) |
 | **Matching** | Detailed Match Breakdown | `GET /api/matches/:id` | `/matches/:id` (`MatchDetailsPage.jsx`) | Verified (explainable score & categories) |
 | **Requests** | Dispatch Roommate Request | `POST /api/requests` | Send Request Button | Verified (persists in DB, rejects self & duplicates with 409) |
-| **Requests** | Query Sent & Received Requests | `GET /api/requests/sent`, `GET /api/requests/received` | `/requests` (`RequestsPage.jsx`) | Verified (state transition management) |
+| **Requests** | Query Sent & Received Requests | `GET /api/requests/sent`, `GET /api/requests/received` | `/requests` (`RequestsPage.jsx`) | Verified (state transition management, in-flight action locks) |
 | **Requests** | Accept Roommate Request | `PUT /api/requests/:id/accept` | Accept Request Button | Verified (atomic update, unlocks chat channel) |
 | **Requests** | Decline Roommate Request | `PUT /api/requests/:id/reject` | Decline Button | Verified (releases activePairKey to null) |
 | **Requests** | Cancel Pending Request | `DELETE /api/requests/:id` | Cancel Button | Verified (deletes pending invitation) |
 | **Messaging** | Conversation Listing | `GET /api/messages/conversations` | `/chat` (`ChatPage.jsx`) | Verified (batched aggregation, requires accepted request) |
-| **Messaging** | Direct Thread History | `GET /api/messages/:userId` | `/chat` (`ChatPage.jsx`) | Verified (chronological order) |
-| **Messaging** | Send Direct Message | `POST /api/messages` | `/chat` (`ChatPage.jsx`) | Verified (persists to MongoDB, validates length) |
+| **Messaging** | Direct Thread History | `GET /api/messages/:userId` | `/chat` (`ChatPage.jsx`) | Verified (on-demand loading, chronological order) |
+| **Messaging** | Send Direct Message | `POST /api/messages` | `/chat` (`ChatPage.jsx`) | Verified (persists to MongoDB, validates length, send loading) |
 | **Admin** | Real-Time Platform Metrics | `GET /api/admin/metrics` | `/admin` (`AdminDashboardPage.jsx`) | Verified (live DB counts & stats) |
 | **Admin** | Student User Directory | `GET /api/admin/users` | `/admin/users` (`AdminUsersPage.jsx`) | Verified (regex escaped, paginated list, clamped limits) |
 | **Admin** | Suspend / Activate Student | `PUT /api/admin/users/:id/status` | `/admin/users` Toggle Button | Verified (enforces admin privilege, prevents self-ban) |
@@ -119,7 +124,7 @@ This document certifies the comprehensive audit, repair, integration, security h
   - Rejects execution against unapproved database targets (PASS)
   - Permits execution with confirmation on local dev database (PASS)
 
-### Integration Tests (22 / 22 PASS via `node tests/verifyApi.js`)
+### Integration Tests (25 / 25 PASS via `node tests/verifyApi.js`)
 1. `GET /api/health` returns 200 and healthy status (PASS)
 2. `GET /api/ready` returns 200 with database connected (PASS)
 3. `POST /api/auth/register` rejects missing fields (PASS)
@@ -142,10 +147,13 @@ This document certifies the comprehensive audit, repair, integration, security h
 20. Duplicate active roommate request rejected with 409 Conflict (PASS)
 21. Request acceptance enforces receiver authorization and idempotence (PASS)
 22. Profile completeness transitions dynamically (complete $\to$ incomplete $\to$ complete) (PASS)
+23. `PUT /api/users/profile` validates age boundaries (16–99) and persists valid age (PASS)
+24. `GET /api/preferences` returns null preferences for new user without fabricating defaults (PASS)
+25. `PUT /api/users/settings` validates booleans and persists settings to user record (PASS)
 
 ### Client Quality Checks
-- Vite bundle production build: PASS (`dist/assets/index-*.js`, 0 errors)
-- Oxlint static analysis: PASS (0 errors, 34 style warnings)
+- Vite bundle production build: PASS (`dist/assets/index-*.js`, 0 errors, 909ms)
+- Oxlint static analysis: PASS (0 errors)
 
 ---
 

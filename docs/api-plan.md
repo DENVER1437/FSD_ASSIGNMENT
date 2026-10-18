@@ -191,12 +191,13 @@
   ```
 
 #### `PUT /api/users/profile`
-- **Description**: Updates student editable profile fields.
+- **Description**: Updates student editable profile fields. Validates `age` (16–99) and dynamically recalculates profile completeness.
 - **Auth**: Private (`protect`)
 - **Request Body**:
   ```json
   {
     "name": "Alex Johnson",
+    "age": 21,
     "college": "Apex Institute",
     "course": "Computer Engineering",
     "city": "Boston",
@@ -214,12 +215,43 @@
   }
   ```
 
+#### `PUT /api/users/settings`
+- **Description**: Persists notification and privacy toggles to the authenticated student's record. Validates all inputs as strict booleans.
+- **Auth**: Private (`protect`)
+- **Request Body**:
+  ```json
+  {
+    "emailNotifications": true,
+    "matchAlerts": true,
+    "requestAlerts": true,
+    "chatNotifications": true,
+    "hideBudgetFromPublic": false
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "success": true,
+    "message": "Settings updated successfully",
+    "data": {
+      "settings": {
+        "emailNotifications": true,
+        "matchAlerts": true,
+        "requestAlerts": true,
+        "chatNotifications": true,
+        "hideBudgetFromPublic": false
+      },
+      "user": { "..." : "..." }
+    }
+  }
+  ```
+
 ---
 
 ### 2.4 Lifestyle Preferences (`/api/preferences`)
 
 #### `GET /api/preferences`
-- **Description**: Retrieves current user's lifestyle survey answers.
+- **Description**: Retrieves current user's lifestyle survey answers. Returns `{ preferences: null }` when the user has not yet recorded responses, rather than fabricating default answers.
 - **Auth**: Private (`protect`)
 - **Response `200 OK`**:
   ```json

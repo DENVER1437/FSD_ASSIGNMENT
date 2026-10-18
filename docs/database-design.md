@@ -101,10 +101,12 @@ Stores student identity, university credentials, profile details, and role autho
 | `college` | String | Yes | No | - | Name of college / university |
 | `city` | String | Yes | No | - | City of study/residence |
 | `course` | String | Yes | No | - | Academic degree/branch (e.g., B.Tech CSE) |
+| `age` | Number | No | No | `null` | Student age (Validated: min 16, max 99) |
 | `bio` | String | No | No | "" | Short bio about personality and hobbies |
 | `profileImage` | String | No | No | Default Avatar | URL to user avatar |
 | `role` | String | Yes | No | `"student"` | Enum: `['student', 'admin']` |
 | `status` | String | Yes | No | `"active"` | Enum: `['active', 'suspended']` |
+| `settings` | Object | No | No | Default settings | User preferences: `emailNotifications`, `matchAlerts`, `requestAlerts`, `chatNotifications`, `hideBudgetFromPublic` |
 | `isProfileComplete`| Boolean | Yes | No | `false` | Dynamically calculated by `checkProfileCompleteness` |
 | `createdAt` | Date | Auto | No | `Date.now` | Account creation timestamp |
 | `updatedAt` | Date | Auto | No | `Date.now` | Last profile update timestamp |

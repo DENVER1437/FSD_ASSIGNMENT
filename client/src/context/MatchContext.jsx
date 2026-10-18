@@ -13,41 +13,73 @@ export function MatchProvider({ children }) {
   const { showToast } = useToast();
 
   const [matches, setMatches] = useState([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [matchesError, setMatchesError] = useState(null);
+
   const [requests, setRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState(null);
+
   const [conversations, setConversations] = useState([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationsError, setConversationsError] = useState(null);
+
   const [preferences, setPreferences] = useState(null);
+  const [preferencesLoading, setPreferencesLoading] = useState(false);
+  const [preferencesError, setPreferencesError] = useState(null);
+
   const [loading, setLoading] = useState(false);
 
   // Fetch lifestyle preferences
   const fetchPreferences = useCallback(async () => {
+    setPreferencesLoading(true);
+    setPreferencesError(null);
     try {
       const res = await preferenceService.getMyPreferences();
       if (res.data?.preferences) {
         setPreferences(res.data.preferences);
         return res.data.preferences;
       }
+      setPreferences(null);
+      return null;
     } catch (err) {
-      console.error('[MatchContext] Error loading preferences:', err.message);
+      const msg = err.response?.data?.message || err.message || 'Failed to load preferences.';
+      console.error('[MatchContext] Error loading preferences:', msg);
+      setPreferencesError(msg);
+      setPreferences(null);
+      return null;
+    } finally {
+      setPreferencesLoading(false);
     }
-    return null;
   }, []);
 
   // Fetch candidate matches
   const fetchMatches = useCallback(async (filters = {}) => {
+    setMatchesLoading(true);
+    setMatchesError(null);
     try {
       const res = await matchService.getMatches(filters);
       if (res.data?.matches) {
         setMatches(res.data.matches);
         return res.data.matches;
       }
+      setMatches([]);
+      return [];
     } catch (err) {
-      console.error('[MatchContext] Error loading matches:', err.message);
+      const msg = err.response?.data?.message || err.message || 'Failed to load roommate matches.';
+      console.error('[MatchContext] Error loading matches:', msg);
+      setMatchesError(msg);
+      setMatches([]);
+      return [];
+    } finally {
+      setMatchesLoading(false);
     }
-    return [];
   }, []);
 
   // Fetch all roommate requests (received + sent)
   const fetchRequests = useCallback(async () => {
+    setRequestsLoading(true);
+    setRequestsError(null);
     try {
       const [receivedRes, sentRes] = await Promise.all([
         requestService.getReceivedRequests(),
@@ -68,39 +100,51 @@ export function MatchProvider({ children }) {
       setRequests(combined);
       return combined;
     } catch (err) {
-      console.error('[MatchContext] Error loading requests:', err.message);
+      const msg = err.response?.data?.message || err.message || 'Failed to load requests.';
+      console.error('[MatchContext] Error loading requests:', msg);
+      setRequestsError(msg);
+      setRequests([]);
       return [];
+    } finally {
+      setRequestsLoading(false);
     }
   }, []);
 
-  // Fetch conversations and message threads
+  // Fetch conversations (optimized summary list without eagerly fetching full history of every conversation)
   const fetchConversations = useCallback(async () => {
+    setConversationsLoading(true);
+    setConversationsError(null);
     try {
       const res = await chatService.getConversations();
-      const convList = res.data?.conversations || [];
-
-      // For each conversation, ensure message thread is accessible
-      const populated = await Promise.all(
-        convList.map(async (conv) => {
-          try {
-            const msgRes = await chatService.getMessages(conv.userId);
-            return {
-              ...conv,
-              messages: msgRes.data?.messages || [],
-            };
-          } catch {
-            return {
-              ...conv,
-              messages: [],
-            };
-          }
-        })
-      );
-
-      setConversations(populated);
-      return populated;
+      const convList = (res.data?.conversations || []).map((c) => ({
+        ...c,
+        messages: c.messages || [],
+      }));
+      setConversations(convList);
+      return convList;
     } catch (err) {
-      console.error('[MatchContext] Error loading conversations:', err.message);
+      const msg = err.response?.data?.message || err.message || 'Failed to load conversations.';
+      console.error('[MatchContext] Error loading conversations:', msg);
+      setConversationsError(msg);
+      setConversations([]);
+      return [];
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, []);
+
+  // On-demand fetch messages for a specific conversation
+  const fetchMessagesForUser = useCallback(async (userId) => {
+    if (!userId) return [];
+    try {
+      const res = await chatService.getMessages(userId);
+      const msgs = res.data?.messages || [];
+      setConversations((prev) =>
+        prev.map((c) => (c.userId === userId ? { ...c, messages: msgs } : c))
+      );
+      return msgs;
+    } catch (err) {
+      console.error('[MatchContext] Error loading thread messages:', err.message);
       return [];
     }
   }, []);
@@ -112,6 +156,10 @@ export function MatchProvider({ children }) {
       setRequests([]);
       setConversations([]);
       setPreferences(null);
+      setMatchesError(null);
+      setRequestsError(null);
+      setConversationsError(null);
+      setPreferencesError(null);
       return;
     }
 
@@ -249,12 +297,10 @@ export function MatchProvider({ children }) {
       }
       // Re-calculate matches with updated preferences
       await fetchMatches();
-      showToast('Lifestyle questionnaire saved! Compatibility scores updated.', 'success');
-      return true;
+      return { success: true, preferences: res.data?.preferences };
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to save questionnaire.';
-      showToast(msg, 'error');
-      return false;
+      return { success: false, message: msg };
     }
   };
 
@@ -262,13 +308,22 @@ export function MatchProvider({ children }) {
     <MatchContext.Provider
       value={{
         matches,
+        matchesLoading,
+        matchesError,
         requests,
+        requestsLoading,
+        requestsError,
         conversations,
+        conversationsLoading,
+        conversationsError,
         preferences,
+        preferencesLoading,
+        preferencesError,
         loading,
         fetchMatches,
         fetchRequests,
         fetchConversations,
+        fetchMessagesForUser,
         fetchPreferences,
         sendRequest,
         acceptRequest,

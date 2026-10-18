@@ -10,28 +10,10 @@ import { checkProfileCompleteness } from './userController.js';
  * @access  Private (JWT)
  */
 export const getMyPreferences = asyncHandler(async (req, res) => {
-  let preferences = await Preference.findOne({ userId: req.user._id });
+  const preferences = await Preference.findOne({ userId: req.user._id });
 
   if (!preferences) {
-    // Return standard defaults if user hasn't completed questionnaire yet
-    preferences = {
-      userId: req.user._id,
-      sleepSchedule: 'flexible',
-      wakeUpSchedule: '7am_9am',
-      productivityRhythm: 'evening',
-      cleanliness: 'moderate',
-      choreSharing: 'strict_rotation',
-      roomComfort: 'moderate',
-      studyHabit: 'in_room_quiet',
-      noisePreference: 'moderate',
-      weekendRoutine: 'relax_and_code',
-      socialLevel: 'ambivert',
-      guestPreference: 'occasional_guests',
-      smokingPreference: 'strictly_non_smoker',
-      budget: '5000-8000',
-      foodPreference: 'any',
-      preferredLocation: 'University District',
-    };
+    return sendSuccess(res, { preferences: null }, 'No lifestyle preferences recorded yet');
   }
 
   return sendSuccess(res, { preferences }, 'Lifestyle preferences retrieved');

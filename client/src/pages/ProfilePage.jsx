@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   Building,
@@ -31,14 +31,15 @@ export function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
-  // Form local state
-  const [formData, setFormData] = useState({
+  // Form local state helper
+  const getInitialFormData = () => ({
     name: user?.name || '',
     college: user?.college || '',
     course: user?.course || '',
     city: user?.city || '',
-    age: user?.age || 21,
+    age: user?.age !== undefined && user?.age !== null ? user.age : '',
     bio: user?.bio || '',
     // Preferences
     budget: preferences?.budget || '5000-8000',
@@ -54,8 +55,18 @@ export function ProfilePage() {
     preferredLocation: preferences?.preferredLocation || 'Downtown / University District',
   });
 
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  // Synchronize asynchronously loaded profile/preferences when form is not dirty and not currently being edited
+  useEffect(() => {
+    if (!isDirty && !isEditing) {
+      setFormData(getInitialFormData());
+    }
+  }, [user, preferences, isDirty, isEditing]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setIsDirty(true);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -68,10 +79,20 @@ export function ProfilePage() {
       return;
     }
 
+    let parsedAge = null;
+    if (formData.age !== '' && formData.age !== null && formData.age !== undefined) {
+      parsedAge = Number(formData.age);
+      if (isNaN(parsedAge) || parsedAge < 16 || parsedAge > 99) {
+        showToast('Age must be a valid number between 16 and 99', 'error');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const userUpdates = {
         name: formData.name.trim(),
+        age: parsedAge,
         college: formData.college.trim(),
         course: formData.course.trim(),
         city: formData.city.trim(),
@@ -92,49 +113,49 @@ export function ProfilePage() {
         preferredLocation: formData.preferredLocation,
       };
 
-      const [userRes, prefRes] = await Promise.all([
+      // Safely perform coordinated updates with explicit partial-success handling
+      const [userResult, prefResult] = await Promise.allSettled([
         userService.updateMyProfile(userUpdates),
         preferenceService.updateMyPreferences(prefUpdates),
       ]);
 
-      if (userRes.data?.user) {
-        updateUser(userRes.data.user);
+      const userSucceeded = userResult.status === 'fulfilled' && userResult.value?.data?.user;
+      const prefSucceeded = prefResult.status === 'fulfilled' && prefResult.value?.data?.preferences;
+
+      if (userSucceeded) {
+        updateUser(userResult.value.data.user);
       }
-      if (prefRes.data?.preferences) {
-        setPreferences(prefRes.data.preferences);
+      if (prefSucceeded) {
+        setPreferences(prefResult.value.data.preferences);
       }
 
-      setIsEditing(false);
-      showToast('Profile and preferences updated successfully in database!', 'success');
+      if (userSucceeded && prefSucceeded) {
+        setIsDirty(false);
+        setIsEditing(false);
+        showToast('Profile and preferences updated successfully!', 'success');
+      } else if (userSucceeded && !prefSucceeded) {
+        const prefError = prefResult.reason?.response?.data?.message || prefResult.reason?.message || 'Preferences update failed';
+        showToast(`Personal details saved, but preferences failed: ${prefError}`, 'warning');
+        setIsDirty(true);
+      } else if (!userSucceeded && prefSucceeded) {
+        const userError = userResult.reason?.response?.data?.message || userResult.reason?.message || 'Profile update failed';
+        showToast(`Preferences saved, but personal details failed: ${userError}`, 'warning');
+        setIsDirty(true);
+      } else {
+        const userError = userResult.reason?.response?.data?.message || userResult.reason?.message || 'Failed to update profile';
+        showToast(`Failed to update profile: ${userError}`, 'error');
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update profile', 'error');
+      showToast(err.response?.data?.message || 'An unexpected error occurred while saving', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-
   const handleCancel = () => {
     // Reset back to saved values
-    setFormData({
-      name: user?.name || '',
-      college: user?.college || '',
-      course: user?.course || '',
-      city: user?.city || '',
-      age: user?.age || 21,
-      bio: user?.bio || '',
-      budget: preferences?.budget || '5000-8000',
-      sleepSchedule: preferences?.sleepSchedule || 'night_owl',
-      wakeUpSchedule: preferences?.wakeUpSchedule || 'after_9am',
-      cleanliness: preferences?.cleanliness || 'meticulous',
-      foodPreference: preferences?.foodPreference || 'vegetarian',
-      noisePreference: preferences?.noisePreference || 'silent',
-      studyHabit: preferences?.studyHabit || 'in_room_quiet',
-      socialLevel: preferences?.socialLevel || 'ambivert',
-      smokingPreference: preferences?.smokingPreference || 'strictly_non_smoker',
-      guestPreference: preferences?.guestPreference || 'occasional_guests',
-      preferredLocation: preferences?.preferredLocation || 'Downtown / University District',
-    });
+    setFormData(getInitialFormData());
+    setIsDirty(false);
     setIsEditing(false);
   };
 
@@ -207,14 +228,20 @@ export function ProfilePage() {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-stone-500 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span>{user?.college}</span>
+                {user?.age ? (
+                  <>
+                    <span>{user.age} yrs old</span>
+                    <span>•</span>
+                  </>
+                ) : null}
+                <span>{user?.college || 'No college listed'}</span>
                 <span>•</span>
-                <span>{user?.course}</span>
+                <span>{user?.course || 'No course listed'}</span>
                 <span>•</span>
-                <span>{user?.city}</span>
+                <span>{user?.city || 'No city listed'}</span>
               </p>
               <p className="text-xs text-stone-600 max-w-xl pt-1 italic">
-                "{user?.bio}"
+                "{user?.bio || 'No bio provided yet.'}"
               </p>
             </div>
           </div>
@@ -237,12 +264,16 @@ export function ProfilePage() {
               required
             />
             <Input
-              label="Age"
+              label="Age (Years)"
               type="number"
               name="age"
+              min="16"
+              max="99"
               value={formData.age}
               onChange={handleChange}
               disabled={!isEditing}
+              placeholder="e.g. 21"
+              helperText={isEditing ? 'Must be between 16 and 99 years' : ''}
             />
             <Input
               label="College / University"

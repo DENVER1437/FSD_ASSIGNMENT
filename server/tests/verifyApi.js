@@ -482,6 +482,128 @@ async function runVerification() {
     }
   });
 
+  // 23. Profile age update, validation, and persistence
+  await test('PUT /users/profile validates age boundaries and persists valid age', async () => {
+    // Under minimum age (16) -> 400
+    const underAgeRes = await fetch(`${BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${alexToken}`,
+      },
+      body: JSON.stringify({ age: 12 }),
+    });
+    const underAgeData = await underAgeRes.json();
+    if (underAgeRes.status !== 400 || underAgeData.success !== false) {
+      throw new Error(`Expected 400 for age 12, got ${underAgeRes.status}`);
+    }
+
+    // Over maximum age (99) -> 400
+    const overAgeRes = await fetch(`${BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${alexToken}`,
+      },
+      body: JSON.stringify({ age: 105 }),
+    });
+    if (overAgeRes.status !== 400) {
+      throw new Error(`Expected 400 for age 105, got ${overAgeRes.status}`);
+    }
+
+    // Valid age (22) -> 200 and persisted in database
+    const validAgeRes = await fetch(`${BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${alexToken}`,
+      },
+      body: JSON.stringify({ age: 22 }),
+    });
+    const validAgeData = await validAgeRes.json();
+    if (!validAgeRes.ok || validAgeData.data.user.age !== 22) {
+      throw new Error(`Age 22 failed to persist: ${JSON.stringify(validAgeData)}`);
+    }
+
+    // Verify persistence via GET /auth/me
+    const meRes = await fetch(`${BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${alexToken}` },
+    });
+    const meData = await meRes.json();
+    if (meData.data.user.age !== 22) {
+      throw new Error(`Expected persisted age 22, got ${meData.data.user.age}`);
+    }
+  });
+
+  // 24. Unrecorded preferences returns null for new user
+  await test('GET /preferences returns null preferences for new user without fabricating defaults', async () => {
+    const freshEmail = `fresh_user_${Date.now()}@university.edu`;
+    const regRes = await fetch(`${BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Fresh Student',
+        email: freshEmail,
+        password: 'Password123!',
+        college: 'Apex Tech',
+        city: 'Boston',
+        course: 'CS',
+      }),
+    });
+    const regData = await regRes.json();
+    const freshToken = regData.data.token;
+
+    const prefRes = await fetch(`${BASE_URL}/preferences`, {
+      headers: { Authorization: `Bearer ${freshToken}` },
+    });
+    const prefData = await prefRes.json();
+    if (!prefRes.ok || prefData.data.preferences !== null) {
+      throw new Error(`Expected preferences: null for new user, got: ${JSON.stringify(prefData)}`);
+    }
+  });
+
+  // 25. Settings persistence and validation
+  await test('PUT /users/settings validates booleans and persists settings to user record', async () => {
+    // Invalid non-boolean value -> 400
+    const invalidRes = await fetch(`${BASE_URL}/users/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${alexToken}`,
+      },
+      body: JSON.stringify({ hideBudgetFromPublic: 'not-a-boolean' }),
+    });
+    if (invalidRes.status !== 400) {
+      throw new Error(`Expected 400 for non-boolean setting, got ${invalidRes.status}`);
+    }
+
+    // Valid settings update
+    const validRes = await fetch(`${BASE_URL}/users/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${alexToken}`,
+      },
+      body: JSON.stringify({
+        hideBudgetFromPublic: true,
+        requestAlerts: false,
+      }),
+    });
+    const validData = await validRes.json();
+    if (!validRes.ok || validData.data.settings.hideBudgetFromPublic !== true || validData.data.settings.requestAlerts !== false) {
+      throw new Error(`Settings update failed: ${JSON.stringify(validData)}`);
+    }
+
+    // Verify settings survived on user record via GET /auth/me
+    const verifyMeRes = await fetch(`${BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${alexToken}` },
+    });
+    const verifyMeData = await verifyMeRes.json();
+    if (verifyMeData.data.user.settings?.hideBudgetFromPublic !== true || verifyMeData.data.user.settings?.requestAlerts !== false) {
+      throw new Error(`Settings failed to persist to user record: ${JSON.stringify(verifyMeData.data.user.settings)}`);
+    }
+  });
+
   console.log('\n==================================================');
   console.log(`  VERIFICATION COMPLETED: ${passed} PASSED, ${failed} FAILED`);
   console.log('==================================================');

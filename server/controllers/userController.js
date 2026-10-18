@@ -39,16 +39,27 @@ export const getMyProfile = asyncHandler(async (req, res) => {
  * @access  Private (JWT)
  */
 export const updateMyProfile = asyncHandler(async (req, res) => {
-  const allowedFields = ['name', 'college', 'city', 'course', 'bio', 'profileImage'];
+  const allowedFields = ['name', 'college', 'city', 'course', 'bio', 'profileImage', 'age'];
   const user = await User.findById(req.user._id);
 
   if (!user) {
     return sendError(res, 'User not found', 404);
   }
 
+  // Validate age if provided
+  if (req.body.age !== undefined && req.body.age !== null && req.body.age !== '') {
+    const ageNum = Number(req.body.age);
+    if (isNaN(ageNum) || ageNum < 16 || ageNum > 99) {
+      return sendError(res, 'Age must be a valid number between 16 and 99', 400);
+    }
+    user.age = Math.floor(ageNum);
+  } else if (req.body.age === null || req.body.age === '') {
+    user.age = null;
+  }
+
   // Prevent mass-assignment: restrict strictly to whitelisted profile fields
   allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) {
+    if (field !== 'age' && req.body[field] !== undefined) {
       user[field] = typeof req.body[field] === 'string' ? req.body[field].trim() : req.body[field];
     }
   });
@@ -59,6 +70,51 @@ export const updateMyProfile = asyncHandler(async (req, res) => {
   await user.save();
 
   return sendSuccess(res, { user: user.toSafeObject() }, 'Profile updated successfully');
+});
+
+/**
+ * @desc    Update current user's notification and privacy settings
+ * @route   PUT /api/users/settings
+ * @access  Private (JWT)
+ */
+export const updateMySettings = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return sendError(res, 'User not found', 404);
+  }
+
+  const allowedSettings = [
+    'emailNotifications',
+    'matchAlerts',
+    'requestAlerts',
+    'chatNotifications',
+    'hideBudgetFromPublic',
+  ];
+
+  for (const key of allowedSettings) {
+    if (req.body[key] !== undefined && typeof req.body[key] !== 'boolean') {
+      return sendError(res, `Setting '${key}' must be a boolean value`, 400);
+    }
+  }
+
+  if (!user.settings) {
+    user.settings = {};
+  }
+
+  allowedSettings.forEach((key) => {
+    if (typeof req.body[key] === 'boolean') {
+      user.settings[key] = req.body[key];
+    }
+  });
+
+  user.markModified('settings');
+  await user.save();
+
+  return sendSuccess(
+    res,
+    { settings: user.toSafeObject().settings, user: user.toSafeObject() },
+    'Settings updated successfully'
+  );
 });
 
 /**

@@ -11,6 +11,11 @@ export const userService = {
     return response.data;
   },
 
+  updateMySettings: async (settings) => {
+    const response = await api.put('/users/settings', settings);
+    return response.data;
+  },
+
   getUserById: async (id) => {
     const response = await api.get(`/users/${id}`);
     return response.data;

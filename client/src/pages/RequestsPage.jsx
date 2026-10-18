@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  UserPlus,
   Inbox,
   Send,
   UserCheck,
@@ -9,6 +8,9 @@ import {
   X,
   MessageSquare,
   Clock,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -20,8 +22,26 @@ import { useMatch } from '../context/MatchContext';
 
 export function RequestsPage() {
   const [activeTab, setActiveTab] = useState('received'); // 'received' | 'sent' | 'accepted'
-  const { requests, acceptRequest, rejectRequest, cancelRequest } = useMatch();
+  const [processingId, setProcessingId] = useState(null);
+  const {
+    requests,
+    requestsLoading,
+    requestsError,
+    fetchRequests,
+    acceptRequest,
+    rejectRequest,
+    cancelRequest,
+  } = useMatch();
   const navigate = useNavigate();
+
+  const handleAction = async (actionFn, id) => {
+    setProcessingId(id);
+    try {
+      await actionFn(id);
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const receivedRequests = requests.filter(
     (r) => r.type === 'received' && r.status === 'pending'
@@ -100,8 +120,25 @@ export function RequestsPage() {
         </button>
       </div>
 
-      {/* Requests List */}
-      {currentList.length === 0 ? (
+      {/* Loading State */}
+      {requestsLoading && requests.length === 0 ? (
+        <div className="py-20 text-center space-y-4">
+          <Loader2 className="w-8 h-8 text-brand-600 animate-spin mx-auto" />
+          <p className="text-sm text-stone-500">Loading your roommate requests...</p>
+        </div>
+      ) : requestsError ? (
+        /* Error State with Retry */
+        <Card className="p-8 text-center border-rose-200 bg-rose-50/20 max-w-xl mx-auto space-y-3">
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+          <h3 className="font-bold text-base text-rose-900">Failed to Load Requests</h3>
+          <p className="text-xs text-stone-600">{requestsError}</p>
+          <div className="pt-2">
+            <Button size="sm" onClick={fetchRequests} icon={RefreshCw}>
+              Retry
+            </Button>
+          </div>
+        </Card>
+      ) : currentList.length === 0 ? (
         <EmptyState
           icon={activeTab === 'accepted' ? UserCheck : Inbox}
           title={
@@ -125,6 +162,9 @@ export function RequestsPage() {
         <div className="space-y-4">
           {currentList.map((req) => {
             const partner = req.sender || req.receiver;
+            const isProcessing = processingId === req.id;
+            const partnerId = partner?._id || partner?.id || req.senderId || req.receiverId;
+
             return (
               <Card key={req.id} className="p-5 sm:p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -137,14 +177,14 @@ export function RequestsPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base text-charcoal">
-                          {partner?.name}
+                          {partner?.name || 'Fellow Student'}
                         </h3>
                         {partner?.score && (
                           <ScoreBadge score={partner.score} size="sm" showLabel={false} />
                         )}
                       </div>
                       <p className="text-xs text-stone-500">
-                        {partner?.college} • {partner?.course || partner?.city}
+                        {partner?.college || 'University'} • {partner?.course || partner?.city || 'Student'}
                       </p>
                     </div>
                   </div>
@@ -181,13 +221,15 @@ export function RequestsPage() {
 
                 {/* Actions Footer */}
                 <div className="pt-2 flex flex-wrap items-center justify-end gap-2.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/matches/${partner.id}`)}
-                  >
-                    View Match Profile
-                  </Button>
+                  {partnerId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/matches/${partnerId}`)}
+                    >
+                      View Match Profile
+                    </Button>
+                  )}
 
                   {/* Actions for Received Pending */}
                   {req.type === 'received' && req.status === 'pending' && (
@@ -195,7 +237,8 @@ export function RequestsPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => rejectRequest(req.id)}
+                        disabled={isProcessing}
+                        onClick={() => handleAction(rejectRequest, req.id)}
                         className="text-stone-600 hover:text-rose-600"
                         icon={X}
                       >
@@ -203,7 +246,9 @@ export function RequestsPage() {
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => acceptRequest(req.id)}
+                        loading={isProcessing}
+                        disabled={isProcessing}
+                        onClick={() => handleAction(acceptRequest, req.id)}
                         icon={Check}
                       >
                         Accept Request
@@ -216,7 +261,9 @@ export function RequestsPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => cancelRequest(req.id)}
+                      loading={isProcessing}
+                      disabled={isProcessing}
+                      onClick={() => handleAction(cancelRequest, req.id)}
                       className="text-stone-500 hover:text-rose-600"
                     >
                       Cancel Request

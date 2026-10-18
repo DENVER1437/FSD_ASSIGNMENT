@@ -7,7 +7,6 @@ import {
   Users,
   Compass,
   Sliders,
-  MessageCircle,
   HelpCircle,
   HeartHandshake,
   Check,
@@ -16,7 +15,6 @@ import Navbar from '../layouts/Navbar';
 import Footer from '../layouts/Footer';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import Badge from '../components/Badge';
 import ScoreBadge from '../components/ScoreBadge';
 import Avatar from '../components/Avatar';
 
@@ -89,76 +87,76 @@ export function LandingPage() {
             </div>
 
             {/* Right Column: Illustrative Compatibility Card Composition */}
-            <div className="lg:col-span-5 relative">
-              {/* Main Sample Match Card */}
-              <Card className="relative z-10 p-6 shadow-card hover:shadow-cardHover border-stone-200/90 max-w-md mx-auto">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=400"
-                      name="Jordan Lee"
-                      size="lg"
-                    />
-                    <div>
-                      <h3 className="font-bold text-base text-charcoal">Jordan Lee, 21</h3>
-                      <p className="text-xs text-stone-500">Apex Institute • Data Science</p>
+            <div className="lg:col-span-5">
+              <div className="max-w-md mx-auto space-y-3.5">
+                {/* Main Sample Match Card */}
+                <Card className="p-6 shadow-card hover:shadow-cardHover border-stone-200/90">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=400"
+                        name="Jordan Lee"
+                        size="lg"
+                      />
+                      <div>
+                        <h3 className="font-bold text-base text-charcoal">Jordan Lee, 21</h3>
+                        <p className="text-xs text-stone-500">Apex Institute • Data Science</p>
+                      </div>
                     </div>
+                    <ScoreBadge score={94} size="sm" />
                   </div>
-                  <ScoreBadge score={94} size="sm" />
-                </div>
 
-                {/* Compatibility Breakdown Highlights */}
-                <div className="space-y-2.5 bg-stone-50 rounded-xl p-3.5 border border-stone-200/60 mb-5">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
-                    Why You Match (94% Compatibility)
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-stone-700">
-                    <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  {/* Compatibility Breakdown Highlights */}
+                  <div className="space-y-2.5 bg-stone-50 rounded-xl p-3.5 border border-stone-200/60 mb-5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                      Why You Match (94% Compatibility)
                     </div>
-                    <span>Sleep: Both sleep past midnight (Night Owl)</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-stone-700">
-                    <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    <div className="flex items-center gap-2 text-xs text-stone-700">
+                      <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </div>
+                      <span>Sleep: Both sleep past midnight (Night Owl)</span>
                     </div>
-                    <span>Budget: Exact parity ($5,000–$8,000 bracket)</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-stone-700">
-                    <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    <div className="flex items-center gap-2 text-xs text-stone-700">
+                      <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </div>
+                      <span>Budget: Exact parity ($5,000–$8,000 bracket)</span>
                     </div>
-                    <span>Living: Daily chores & vegetarian kitchen</span>
+                    <div className="flex items-center gap-2 text-xs text-stone-700">
+                      <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </div>
+                      <span>Living: Daily chores & vegetarian kitchen</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => navigate('/login')}
-                    className="flex-1 justify-center"
-                    size="sm"
-                  >
-                    Send Roommate Request
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/login')}
-                    size="sm"
-                  >
-                    View Breakdown
-                  </Button>
-                </div>
-              </Card>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => navigate('/login')}
+                      className="flex-1 justify-center"
+                      size="sm"
+                    >
+                      Send Roommate Request
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/login')}
+                      size="sm"
+                    >
+                      View Breakdown
+                    </Button>
+                  </div>
+                </Card>
 
-              {/* Decorative floating preview badge */}
-              <div className="hidden sm:block absolute -bottom-5 -left-4 z-20 bg-white border border-stone-200 rounded-xl p-3 shadow-md">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                {/* Mutual Acceptance Trust Banner */}
+                <div className="bg-white border border-stone-200/80 rounded-2xl p-3.5 shadow-subtle flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                     <HeartHandshake className="w-4 h-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-bold text-charcoal">Mutual Acceptance</p>
-                    <p className="text-[10px] text-stone-500">Direct messaging unlocks upon mutual consent</p>
+                    <p className="text-[11px] text-stone-500">Direct messaging unlocks upon mutual consent</p>
                   </div>
                 </div>
               </div>
