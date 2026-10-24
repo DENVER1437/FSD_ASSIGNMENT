@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { User, Preference, Request, Message, Report } from '../models/index.js';
+import { User, Preference, Request, Report } from '../models/index.js';
 import { connectDB, disconnectDB } from '../config/db.js';
 
 dotenv.config();
@@ -120,7 +120,6 @@ const seedDatabase = async () => {
         User.deleteMany({}),
         Preference.deleteMany({}),
         Request.deleteMany({}),
-        Message.deleteMany({}),
         Report.deleteMany({}),
       ]);
     } else {

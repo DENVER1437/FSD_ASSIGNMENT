@@ -15,7 +15,6 @@ export const ROUTES = {
   MATCHES: '/matches',
   MATCH_DETAILS: '/matches/:id',
   REQUESTS: '/requests',
-  CHAT: '/chat',
   SETTINGS: '/settings',
 
   // Admin Protected Routes

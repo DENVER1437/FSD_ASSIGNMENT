@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 
 // Guards
@@ -52,7 +52,6 @@ export default function AppRoutes() {
           <Route path={ROUTES.MATCHES} element={<MatchesPage />} />
           <Route path={ROUTES.MATCH_DETAILS} element={<MatchDetailsPage />} />
           <Route path={ROUTES.REQUESTS} element={<RequestsPage />} />
-          <Route path={ROUTES.CHAT} element={<Navigate to={ROUTES.DASHBOARD} replace />} />
           <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
         </Route>
       </Route>

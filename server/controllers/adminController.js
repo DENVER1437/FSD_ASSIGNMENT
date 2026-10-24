@@ -2,7 +2,6 @@ import { User } from '../models/User.js';
 import { Preference } from '../models/Preference.js';
 import { Request } from '../models/Request.js';
 import { Report } from '../models/Report.js';
-import { Message } from '../models/Message.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 
@@ -175,9 +174,6 @@ export const deleteUser = asyncHandler(async (req, res) => {
     User.findByIdAndDelete(req.params.id),
     Preference.deleteMany({ userId: req.params.id }),
     Request.deleteMany({
-      $or: [{ senderId: req.params.id }, { receiverId: req.params.id }],
-    }),
-    Message.deleteMany({
       $or: [{ senderId: req.params.id }, { receiverId: req.params.id }],
     }),
   ]);

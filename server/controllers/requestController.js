@@ -1,6 +1,5 @@
 import { Request } from '../models/Request.js';
 import { User } from '../models/User.js';
-import { Message } from '../models/Message.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 
@@ -172,24 +171,10 @@ export const acceptRequest = asyncHandler(async (req, res) => {
     return sendError(res, `Cannot accept request with status '${existing.status}'`, 400);
   }
 
-  // Seed welcome system message into the conversation thread (recoverable operation)
-  let welcomeMessageCreated = false;
-  try {
-    await Message.create({
-      senderId: request.receiverId._id,
-      receiverId: request.senderId._id,
-      message: `🤝 Connected! Roommate request accepted by ${req.user.name}. You can now message each other directly.`,
-      isSystem: true,
-    });
-    welcomeMessageCreated = true;
-  } catch (msgErr) {
-    console.warn('[RequestController] Welcome message non-critical creation failure:', msgErr.message);
-  }
-
   return sendSuccess(
     res,
-    { request, welcomeMessageCreated },
-    `Accepted roommate request from ${request.senderId.name}! Chat unlocked.`
+    { request },
+    `Accepted roommate request from ${request.senderId.name}! Roommate connection confirmed.`
   );
 });
 
