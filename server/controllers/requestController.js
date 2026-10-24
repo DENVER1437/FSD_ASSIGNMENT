@@ -152,8 +152,8 @@ export const acceptRequest = asyncHandler(async (req, res) => {
     },
     { new: true }
   )
-    .populate('senderId', 'name profileImage college')
-    .populate('receiverId', 'name profileImage college');
+    .populate('senderId', 'name profileImage college city')
+    .populate('receiverId', 'name profileImage college city');
 
   if (!request) {
     const existing = await Request.findById(req.params.id);

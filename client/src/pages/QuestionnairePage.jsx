@@ -242,10 +242,10 @@ export function QuestionnairePage() {
           label: '13. What is your target monthly rent budget per person?',
           required: true,
           options: [
-            { value: '<5000', label: 'Under $5,000', detail: 'Economy shared rooms and student housing' },
-            { value: '5000-8000', label: '$5,000 – $8,000', detail: 'Standard 2BHK/3BHK shared flat range' },
-            { value: '8000-12000', label: '$8,000 – $12,000', detail: 'Premium modern apartment near transit' },
-            { value: '12000+', label: '$12,000+', detail: 'High-end apartments with luxury amenities' },
+            { value: '<5000', label: 'Under ₹5,000', detail: 'Economy shared rooms and student housing' },
+            { value: '5000-8000', label: '₹5,000 – ₹8,000', detail: 'Standard 2BHK/3BHK shared flat range' },
+            { value: '8000-12000', label: '₹8,000 – ₹12,000', detail: 'Premium modern apartment near transit' },
+            { value: '12000+', label: '₹12,000+', detail: 'High-end apartments with luxury amenities' },
           ],
         },
         {

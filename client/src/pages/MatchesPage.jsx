@@ -6,16 +6,12 @@ import {
   SlidersHorizontal,
   X,
   Sparkles,
-  MapPin,
-  Building,
-  Check,
   AlertCircle,
   Loader2,
   RefreshCw,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Avatar from '../components/Avatar';
 import ScoreBadge from '../components/ScoreBadge';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
@@ -295,102 +291,44 @@ export function MatchesPage() {
           onAction={resetFilters}
         />
       ) : (
-        /* Matches Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        /* Single Row Matches List */
+        <Card className="divide-y divide-stone-100 overflow-hidden border-stone-200">
           {filteredMatches.map((match) => {
             const candidateId = match.user?._id || match.user?.id || match.userId;
-            const hasRequested = requests.some(
+            const existingReq = requests.find(
               (r) =>
                 (r.receiverId === candidateId || r.senderId === candidateId) &&
                 r.status !== 'rejected'
             );
+            const isAccepted = existingReq?.status === 'accepted';
+            const hasRequested = Boolean(existingReq);
 
             return (
-              <Card
+              <div
                 key={match.id}
-                className="p-5 flex flex-col justify-between hover:shadow-cardHover transition-all border-stone-200"
+                className="px-5 py-4 flex items-center justify-between gap-4 hover:bg-stone-50/70 transition-colors"
               >
-                <div className="space-y-4">
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar
-                        src={match.user?.profileImage}
-                        name={match.user?.name || 'Student'}
-                        size="lg"
-                      />
-                      <div>
-                        <h3 className="font-bold text-base text-charcoal">
-                          {match.user?.name}
-                          {match.user?.age ? `, ${match.user.age}` : ''}
-                        </h3>
-                        <p className="text-xs text-stone-500 line-clamp-1">
-                          {match.user?.course || 'Student'}
-                        </p>
-                      </div>
-                    </div>
-                    <ScoreBadge score={match.score} size="sm" showLabel={false} />
-                  </div>
+                {/* Name */}
+                <span className="font-semibold text-charcoal text-sm sm:text-base">
+                  {match.user?.name}
+                </span>
 
-                  {/* College & Locality */}
-                  <div className="text-xs text-stone-500 space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Building className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      <span className="truncate">{match.user?.college || 'College not listed'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                      <span>{match.user?.city || 'City not listed'}</span>
-                    </div>
-                  </div>
-
-                  {/* Short Bio */}
-                  <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed bg-stone-50/80 p-2.5 rounded-xl border border-stone-100">
-                    "{match.user?.bio || 'Looking for a compatible roommate on campus.'}"
-                  </p>
-
-                  {/* Shared Traits Tags */}
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                      Why You Match:
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      {(match.commonPreferences || []).slice(0, 2).map((pref, idx) => (
-                        <div
-                          key={idx}
-                          className="text-[11px] text-emerald-800 bg-emerald-50/80 border border-emerald-200/50 px-2 py-1 rounded-lg flex items-center gap-1.5"
-                        >
-                          <Check className="w-3 h-3 text-emerald-600 shrink-0 stroke-[3]" />
-                          <span className="truncate">{pref}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Actions Footer */}
-                <div className="pt-5 mt-5 border-t border-stone-100 flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/matches/${match.id}`)}
-                    className="flex-1 justify-center text-xs"
-                  >
-                    View Details
-                  </Button>
+                {/* Percentage Match & Send Request Button */}
+                <div className="flex items-center gap-3.5 shrink-0">
+                  <ScoreBadge score={match.score} size="sm" showLabel={false} />
                   <Button
                     size="sm"
                     disabled={hasRequested}
                     onClick={() => sendRequest(match.user)}
-                    className="flex-1 justify-center text-xs"
+                    className="min-w-[120px] justify-center text-xs"
                   >
-                    {hasRequested ? 'Requested' : 'Send Request'}
+                    {isAccepted ? 'Connected' : hasRequested ? 'Requested' : 'Send Request'}
                   </Button>
                 </div>
-              </Card>
+              </div>
             );
           })}
-        </div>
+        </Card>
       )}
     </div>
   );

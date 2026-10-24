@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Users,
   UserPlus,
-  MessageSquare,
   Settings,
   LogOut,
   Shield,
@@ -39,7 +38,6 @@ export function StudentLayout() {
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : null,
     },
     { label: 'Questionnaire', to: '/questionnaire', icon: ClipboardList },
-    { label: 'Messages', to: '/chat', icon: MessageSquare },
     { label: 'My Profile', to: '/profile', icon: User },
     { label: 'Settings', to: '/settings', icon: Settings },
   ];
@@ -120,7 +118,7 @@ export function StudentLayout() {
                   {user?.name || 'Student'}
                 </p>
                 <p className="text-[11px] text-stone-400 truncate">
-                  {user?.college || 'Apex Institute'}
+                  {user?.college || 'Nirma University'}
                 </p>
               </div>
             </div>

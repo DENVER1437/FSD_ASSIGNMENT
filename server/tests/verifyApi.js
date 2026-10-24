@@ -63,8 +63,8 @@ async function runVerification() {
         name: 'Automated Test User',
         email: testStudentEmail,
         password: 'Password123!',
-        college: 'Test Tech University',
-        city: 'Boston',
+        college: 'Nirma University',
+        city: 'Ahmedabad',
         course: 'B.Tech IT',
       }),
     });
@@ -75,21 +75,23 @@ async function runVerification() {
     studentToken = data.data.token;
   });
 
-  // 5. Login with seeded student Alex
+  // 5. Login with seeded student Aarav
+  let aaravToken = '';
   let alexToken = '';
-  await test('POST /auth/login logs in seeded student Alex', async () => {
+  await test('POST /auth/login logs in seeded student Aarav', async () => {
     const res = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'alex@university.edu',
+        email: 'aarav.patel@nirmauni.ac.in',
         password: 'Password123!',
       }),
     });
     const data = await res.json();
-    if (!res.ok || !data.data?.token || data.data.user.email !== 'alex@university.edu') {
+    if (!res.ok || !data.data?.token || data.data.user.email !== 'aarav.patel@nirmauni.ac.in') {
       throw new Error(`Login failed: ${JSON.stringify(data)}`);
     }
+    aaravToken = data.data.token;
     alexToken = data.data.token;
   });
 
@@ -99,7 +101,7 @@ async function runVerification() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'alex@university.edu',
+        email: 'aarav.patel@nirmauni.ac.in',
         password: 'WrongPassword999!',
       }),
     });
@@ -112,10 +114,10 @@ async function runVerification() {
   // 7. GET /auth/me returns current user
   await test('GET /auth/me returns authenticated user details', async () => {
     const res = await fetch(`${BASE_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${alexToken}` },
+      headers: { Authorization: `Bearer ${aaravToken}` },
     });
     const data = await res.json();
-    if (!res.ok || data.data.user.email !== 'alex@university.edu') {
+    if (!res.ok || data.data.user.email !== 'aarav.patel@nirmauni.ac.in') {
       throw new Error(`Auth me failed: ${JSON.stringify(data)}`);
     }
   });
@@ -136,12 +138,12 @@ async function runVerification() {
         Authorization: `Bearer ${alexToken}`,
       },
       body: JSON.stringify({
-        city: 'Cambridge',
+        city: 'Surat',
         bio: 'Updated bio from automated test suite.',
       }),
     });
     const data = await res.json();
-    if (!res.ok || data.data.user.city !== 'Cambridge') {
+    if (!res.ok || data.data.user.city !== 'Surat') {
       throw new Error(`Profile update failed: ${JSON.stringify(data)}`);
     }
   });
@@ -209,14 +211,13 @@ async function runVerification() {
     if (!sentRes.ok) throw new Error(`Failed to get sent requests`);
   });
 
-  // 13. Messages / Chat
-  await test('GET /messages/conversations retrieves user conversation list', async () => {
+  // 13. Messages / Chat Decommissioned
+  await test('GET /messages/conversations returns 404 (messaging disabled)', async () => {
     const res = await fetch(`${BASE_URL}/messages/conversations`, {
       headers: { Authorization: `Bearer ${alexToken}` },
     });
-    const data = await res.json();
-    if (!res.ok || !Array.isArray(data.data.conversations)) {
-      throw new Error(`Failed to fetch conversations: ${JSON.stringify(data)}`);
+    if (res.status !== 404) {
+      throw new Error(`Expected 404 for decommissioned messaging endpoint, got ${res.status}`);
     }
   });
 
@@ -336,8 +337,8 @@ async function runVerification() {
         name: 'Request Student Alpha',
         email: `req_alpha_${ts}@university.edu`,
         password: 'Password123!',
-        college: 'Test College',
-        city: 'Boston',
+        college: 'Nirma University',
+        city: 'Ahmedabad',
         course: 'CS',
       }),
     });
@@ -352,8 +353,8 @@ async function runVerification() {
         name: 'Request Student Beta',
         email: `req_beta_${ts}@university.edu`,
         password: 'Password123!',
-        college: 'Test College',
-        city: 'Boston',
+        college: 'DA-IICT',
+        city: 'Surat',
         course: 'CS',
       }),
     });
@@ -442,8 +443,8 @@ async function runVerification() {
       },
       body: JSON.stringify({
         name: 'Alpha Complete',
-        college: 'Apex Tech',
-        city: 'Boston',
+        college: 'Nirma University',
+        city: 'Vadodara',
         course: 'Computer Science',
         bio: 'Looking for a clean and quiet roommate for the next academic year.',
       }),
@@ -545,8 +546,8 @@ async function runVerification() {
         name: 'Fresh Student',
         email: freshEmail,
         password: 'Password123!',
-        college: 'Apex Tech',
-        city: 'Boston',
+        college: 'DA-IICT',
+        city: 'Surat',
         course: 'CS',
       }),
     });

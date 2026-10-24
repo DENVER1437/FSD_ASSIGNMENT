@@ -100,7 +100,7 @@ export function RegisterPage() {
               label="Full Name"
               name="name"
               icon={User}
-              placeholder="e.g., Alex Johnson"
+              placeholder="e.g., Aarav Patel"
               value={formData.name}
               onChange={handleChange}
               required
@@ -111,7 +111,7 @@ export function RegisterPage() {
               type="email"
               name="email"
               icon={Mail}
-              placeholder="student@university.edu"
+              placeholder="student@nirmauni.ac.in"
               value={formData.email}
               onChange={handleChange}
               required
@@ -122,7 +122,7 @@ export function RegisterPage() {
                 label="College / Campus"
                 name="college"
                 icon={Building}
-                placeholder="Apex Institute"
+                placeholder="Nirma University or DA-IICT"
                 value={formData.college}
                 onChange={handleChange}
                 required
@@ -131,7 +131,7 @@ export function RegisterPage() {
                 label="Study City"
                 name="city"
                 icon={MapPin}
-                placeholder="Boston"
+                placeholder="Ahmedabad, Surat, or Vadodara"
                 value={formData.city}
                 onChange={handleChange}
                 required

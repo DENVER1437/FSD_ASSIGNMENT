@@ -357,10 +357,10 @@ export function ProfilePage() {
               disabled={!isEditing}
               options={[
                 { label: 'Not specified yet', value: '' },
-                { label: 'Under $5,000 / mo', value: '<5000' },
-                { label: '$5,000 – $8,000 / mo', value: '5000-8000' },
-                { label: '$8,000 – $12,000 / mo', value: '8000-12000' },
-                { label: '$12,000+ / mo', value: '12000+' },
+                { label: 'Under ₹5,000 / mo', value: '<5000' },
+                { label: '₹5,000 – ₹8,000 / mo', value: '5000-8000' },
+                { label: '₹8,000 – ₹12,000 / mo', value: '8000-12000' },
+                { label: '₹12,000+ / mo', value: '12000+' },
               ]}
             />
 

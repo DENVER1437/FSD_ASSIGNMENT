@@ -24,6 +24,15 @@ export const BUDGET_TIERS = {
   above_12000: 4,
 };
 
+// Helper: Format budget strings with Rupee symbol
+export const formatBudgetDisplay = (b) => {
+  if (b === '<5000' || b === 'under_5000') return 'Under ₹5,000';
+  if (b === '5000-8000') return '₹5,000–₹8,000';
+  if (b === '8000-12000') return '₹8,000–₹12,000';
+  if (b === '12000+' || b === 'above_12000') return '₹12,000+';
+  return b;
+};
+
 // Helper: Map ordinal levels for 3-tier scales
 export const ORDINAL_3 = {
   // Cleanliness
@@ -194,13 +203,13 @@ export const calculateCompatibility = (prefA, prefB, userA = {}, userB = {}) => 
       weightedPoints += budgetFactor * 20;
 
       if (budgetFactor === 1.0) {
-        commonPreferences.push(`Identical rent budget tier (${budgetA})`);
+        commonPreferences.push(`Identical rent budget tier (${formatBudgetDisplay(budgetA)})`);
       } else if (budgetFactor === 0.65) {
-        differences.push(`Budget: Adjacent rent targets (${budgetA} vs ${budgetB})`);
+        differences.push(`Budget: Adjacent rent targets (${formatBudgetDisplay(budgetA)} vs ${formatBudgetDisplay(budgetB)})`);
       } else if (budgetFactor === 0.25) {
-        differences.push(`Budget: Non-overlapping rent targets (${budgetA} vs ${budgetB})`);
+        differences.push(`Budget: Non-overlapping rent targets (${formatBudgetDisplay(budgetA)} vs ${formatBudgetDisplay(budgetB)})`);
       } else {
-        differences.push(`Budget: Extreme rent disparity (${budgetA} vs ${budgetB})`);
+        differences.push(`Budget: Extreme rent disparity (${formatBudgetDisplay(budgetA)} vs ${formatBudgetDisplay(budgetB)})`);
       }
 
       categoryBreakdown.push({

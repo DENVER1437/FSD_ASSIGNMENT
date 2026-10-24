@@ -29,7 +29,6 @@ export function SettingsPage() {
     emailNotifications: user?.settings?.emailNotifications ?? true,
     matchAlerts: user?.settings?.matchAlerts ?? true,
     requestAlerts: user?.settings?.requestAlerts ?? true,
-    chatNotifications: user?.settings?.chatNotifications ?? true,
     hideBudgetFromPublic: user?.settings?.hideBudgetFromPublic ?? false,
   });
 
@@ -40,7 +39,6 @@ export function SettingsPage() {
         emailNotifications: user.settings.emailNotifications ?? true,
         matchAlerts: user.settings.matchAlerts ?? true,
         requestAlerts: user.settings.requestAlerts ?? true,
-        chatNotifications: user.settings.chatNotifications ?? true,
         hideBudgetFromPublic: user.settings.hideBudgetFromPublic ?? false,
       });
     }
@@ -143,16 +141,6 @@ export function SettingsPage() {
             {savingKey === 'matchAlerts' && <Loader2 className="w-4 h-4 text-brand-600 animate-spin mt-1" />}
           </div>
 
-          <div className="flex items-start justify-between">
-            <Checkbox
-              label="Direct Message Pings"
-              description="Notify me when an accepted roommate sends an apartment tour message."
-              checked={settings.chatNotifications}
-              onChange={() => handleToggle('chatNotifications')}
-              disabled={savingKey === 'chatNotifications'}
-            />
-            {savingKey === 'chatNotifications' && <Loader2 className="w-4 h-4 text-brand-600 animate-spin mt-1" />}
-          </div>
 
           {/* Unsupported Mock Feature clearly identified */}
           <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 opacity-60">
@@ -230,7 +218,7 @@ export function SettingsPage() {
       >
         <div className="space-y-4 pt-2">
           <p className="text-xs text-stone-600">
-            This will log you out of your account on this device. Your profile, questionnaire answers, roommate requests, and conversations will remain safely persisted on the server.
+            This will log you out of your account on this device. Your profile, questionnaire answers, roommate requests, and preferences will remain safely persisted on the server.
           </p>
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-100">
             <Button

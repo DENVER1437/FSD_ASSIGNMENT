@@ -9,7 +9,6 @@ import {
   BookOpen,
   Sparkles,
   Send,
-  MessageSquare,
   AlertTriangle,
   Loader2,
 } from 'lucide-react';
@@ -140,13 +139,10 @@ export function MatchDetailsPage() {
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             {isAccepted ? (
-              <Button
-                onClick={() => navigate('/chat')}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                icon={MessageSquare}
-              >
-                Connected • Open Chat
-              </Button>
+              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                Connected as Roommates
+              </div>
             ) : (
               <Button
                 disabled={isRequested}

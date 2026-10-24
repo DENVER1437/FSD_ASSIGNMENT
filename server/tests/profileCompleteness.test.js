@@ -20,9 +20,9 @@ test('Profile Completeness - Empty or newly registered user is incomplete', () =
 test('Profile Completeness - Fully populated profile evaluates to true', () => {
   const completeUser = {
     name: 'Maya Patel',
-    college: 'Apex Institute of Technology',
+    college: 'Nirma University',
     course: 'B.Tech Computer Science',
-    city: 'Boston',
+    city: 'Ahmedabad',
     bio: 'Junior studying computer science. Quiet study lover and night owl.',
   };
 
@@ -32,9 +32,9 @@ test('Profile Completeness - Fully populated profile evaluates to true', () => {
 test('Profile Completeness - Transitions from complete to incomplete when required field is cleared', () => {
   const user = {
     name: 'Maya Patel',
-    college: 'Apex Institute of Technology',
+    college: 'Nirma University',
     course: 'B.Tech Computer Science',
-    city: 'Boston',
+    city: 'Ahmedabad',
     bio: 'Junior studying computer science. Quiet study lover and night owl.',
   };
 
@@ -51,16 +51,16 @@ test('Profile Completeness - Transitions from complete to incomplete when requir
   assert.equal(checkProfileCompleteness(user), false);
 
   // User restores college
-  user.college = 'Apex Institute';
+  user.college = 'Nirma University';
   assert.equal(checkProfileCompleteness(user), true);
 });
 
 test('Profile Completeness - Short trivial bio (< 10 chars) remains incomplete', () => {
   const user = {
     name: 'Maya Patel',
-    college: 'Apex Institute',
+    college: 'Nirma University',
     course: 'B.Tech',
-    city: 'Boston',
+    city: 'Ahmedabad',
     bio: 'Hello!', // 6 chars
   };
 

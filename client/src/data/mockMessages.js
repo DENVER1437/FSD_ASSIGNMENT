@@ -9,12 +9,12 @@ export const MOCK_CONVERSATIONS = [
     userId: 'user-3',
     user: {
       id: 'user-3',
-      name: 'Marcus Taylor',
-      college: 'Metro State University',
-      profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+      name: 'Dhruv Shah',
+      college: 'DA-IICT',
+      profileImage: '',
       status: 'online',
     },
-    lastMessage: 'Sounds good! Let me check the listing near Tremont St.',
+    lastMessage: 'Sounds good! Let me check the listing near SG Highway.',
     lastMessageTime: '10:45 AM',
     unreadCount: 0,
     messages: [
@@ -35,7 +35,7 @@ export const MOCK_CONVERSATIONS = [
       {
         id: 'msg-3',
         senderId: 'user-3',
-        text: 'Yeah, I found a couple of 2-bedroom units near the subway line within our $5k-$8k budget.',
+        text: 'Yeah, I found a couple of 2-bedroom units near the BRTS corridor within our ₹5,000–₹8,000 budget.',
         timestamp: 'Yesterday, 4:22 PM',
         isMe: false,
       },

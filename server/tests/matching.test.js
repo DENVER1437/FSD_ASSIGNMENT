@@ -18,8 +18,8 @@ test('Matching Algorithm - Identical Complete Preferences yield 100% score', () 
   const result = calculateCompatibility(
     pref,
     pref,
-    { id: 'user_1', college: 'Apex Tech' },
-    { id: 'user_2', college: 'Apex Tech' }
+    { id: 'user_1', college: 'Nirma University' },
+    { id: 'user_2', college: 'Nirma University' }
   );
 
   assert.equal(result.score, 100);

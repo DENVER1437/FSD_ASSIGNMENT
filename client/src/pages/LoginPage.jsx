@@ -56,7 +56,7 @@ export function LoginPage() {
 
   const handleQuickDemoFill = (type = 'student') => {
     if (type === 'student') {
-      setEmail('alex@university.edu');
+      setEmail('aarav.patel@nirmauni.ac.in');
       setPassword('Password123!');
       setError('');
     } else {
@@ -127,7 +127,7 @@ export function LoginPage() {
               label="University Email"
               type="email"
               icon={Mail}
-              placeholder="student@university.edu"
+              placeholder="aarav.patel@nirmauni.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

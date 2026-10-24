@@ -6,23 +6,21 @@ import {
   UserCheck,
   Check,
   X,
-  MessageSquare,
-  Clock,
   Loader2,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Avatar from '../components/Avatar';
-import ScoreBadge from '../components/ScoreBadge';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
+import { useAuth } from '../context/AuthContext';
 import { useMatch } from '../context/MatchContext';
 
 export function RequestsPage() {
   const [activeTab, setActiveTab] = useState('received'); // 'received' | 'sent' | 'accepted'
   const [processingId, setProcessingId] = useState(null);
+  const { user: currentUser } = useAuth();
   const {
     requests,
     requestsLoading,
@@ -153,93 +151,52 @@ export function RequestsPage() {
               ? 'When other students find your profile compatible and invite you, requests will appear here.'
               : activeTab === 'sent'
               ? 'You have not dispatched any pending roommate invitations.'
-              : 'Accepting incoming requests unlocks direct chat messaging.'
+              : 'Accepting incoming requests confirms mutual roommate connections.'
           }
           actionLabel="Browse Compatible Roommates"
           onAction={() => navigate('/matches')}
         />
       ) : (
-        <div className="space-y-4">
+        /* Single-Row Requests List */
+        <Card className="divide-y divide-stone-100 overflow-hidden border-stone-200">
           {currentList.map((req) => {
-            const partner = req.sender || req.receiver;
+            const currentUserId = currentUser?._id || currentUser?.id;
+            const partner =
+              (req.sender?._id || req.senderId) === currentUserId
+                ? req.receiver
+                : req.sender || req.receiver;
             const isProcessing = processingId === req.id;
             const partnerId = partner?._id || partner?.id || req.senderId || req.receiverId;
+            const partnerName = partner?.name || 'Fellow Student';
+            const partnerCity = partner?.city || 'Ahmedabad';
 
             return (
-              <Card key={req.id} className="p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <Avatar
-                      src={partner?.profileImage}
-                      name={partner?.name || 'Student'}
-                      size="lg"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-base text-charcoal">
-                          {partner?.name || 'Fellow Student'}
-                        </h3>
-                        {partner?.score && (
-                          <ScoreBadge score={partner.score} size="sm" showLabel={false} />
-                        )}
-                      </div>
-                      <p className="text-xs text-stone-500">
-                        {partner?.college || 'University'} • {partner?.course || partner?.city || 'Student'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-start sm:self-center">
-                    <span className="text-[11px] text-stone-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {new Date(req.createdAt).toLocaleDateString()}
-                    </span>
-                    <span
-                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                        req.status === 'accepted'
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : req.status === 'rejected'
-                          ? 'bg-rose-50 text-rose-800 border-rose-200'
-                          : 'bg-amber-50 text-amber-800 border-amber-200'
-                      }`}
-                    >
-                      {req.status === 'accepted'
-                        ? 'Connected'
-                        : req.status === 'rejected'
-                        ? 'Declined'
-                        : 'Pending'}
-                    </span>
-                  </div>
+              <div
+                key={req.id}
+                className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-stone-50/70 transition-colors"
+              >
+                {/* Name and City only */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-charcoal text-sm sm:text-base truncate">
+                    {partnerName}
+                  </span>
+                  <span className="text-stone-300">•</span>
+                  <span className="text-xs sm:text-sm text-stone-500 font-medium truncate">
+                    {partnerCity}
+                  </span>
                 </div>
 
-                {/* Optional Message text */}
-                {req.message && (
-                  <p className="text-xs text-stone-600 bg-stone-50 p-3 rounded-xl border border-stone-200/60 leading-relaxed italic">
-                    "{req.message}"
-                  </p>
-                )}
-
-                {/* Actions Footer */}
-                <div className="pt-2 flex flex-wrap items-center justify-end gap-2.5">
-                  {partnerId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/matches/${partnerId}`)}
-                    >
-                      View Match Profile
-                    </Button>
-                  )}
-
+                {/* Related to Request Action Buttons */}
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                   {/* Actions for Received Pending */}
-                  {req.type === 'received' && req.status === 'pending' && (
+                  {activeTab === 'received' && (
                     <>
                       <Button
                         variant="secondary"
                         size="sm"
                         disabled={isProcessing}
                         onClick={() => handleAction(rejectRequest, req.id)}
-                        className="text-stone-600 hover:text-rose-600"
+                        className="text-stone-600 hover:text-rose-600 text-xs px-3"
                         icon={X}
                       >
                         Decline
@@ -249,6 +206,7 @@ export function RequestsPage() {
                         loading={isProcessing}
                         disabled={isProcessing}
                         onClick={() => handleAction(acceptRequest, req.id)}
+                        className="text-xs px-3"
                         icon={Check}
                       >
                         Accept Request
@@ -257,35 +215,48 @@ export function RequestsPage() {
                   )}
 
                   {/* Actions for Sent Pending */}
-                  {req.type === 'sent' && req.status === 'pending' && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={isProcessing}
-                      disabled={isProcessing}
-                      onClick={() => handleAction(cancelRequest, req.id)}
-                      className="text-stone-500 hover:text-rose-600"
-                    >
-                      Cancel Request
-                    </Button>
+                  {activeTab === 'sent' && (
+                    <>
+                      <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+                        Pending
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={isProcessing}
+                        disabled={isProcessing}
+                        onClick={() => handleAction(cancelRequest, req.id)}
+                        className="text-stone-500 hover:text-rose-600 text-xs px-3"
+                      >
+                        Cancel Request
+                      </Button>
+                    </>
                   )}
 
-                  {/* Actions for Accepted */}
-                  {req.status === 'accepted' && (
-                    <Button
-                      size="sm"
-                      onClick={() => navigate('/chat')}
-                      icon={MessageSquare}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      Open Messages
-                    </Button>
+                  {/* Actions for Connected */}
+                  {activeTab === 'accepted' && (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        Connected
+                      </span>
+                      {partnerId && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/matches/${partnerId}`)}
+                          className="text-xs px-3"
+                        >
+                          View Profile
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
-              </Card>
+              </div>
             );
           })}
-        </div>
+        </Card>
       )}
     </div>
   );

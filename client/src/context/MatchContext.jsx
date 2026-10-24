@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { matchService } from '../services/matchService';
 import { requestService } from '../services/requestService';
-import { chatService } from '../services/chatService';
 import { preferenceService } from '../services/preferenceService';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
@@ -19,10 +18,6 @@ export function MatchProvider({ children }) {
   const [requests, setRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsError, setRequestsError] = useState(null);
-
-  const [conversations, setConversations] = useState([]);
-  const [conversationsLoading, setConversationsLoading] = useState(false);
-  const [conversationsError, setConversationsError] = useState(null);
 
   const [preferences, setPreferences] = useState(null);
   const [preferencesLoading, setPreferencesLoading] = useState(false);
@@ -110,55 +105,14 @@ export function MatchProvider({ children }) {
     }
   }, []);
 
-  // Fetch conversations (optimized summary list without eagerly fetching full history of every conversation)
-  const fetchConversations = useCallback(async () => {
-    setConversationsLoading(true);
-    setConversationsError(null);
-    try {
-      const res = await chatService.getConversations();
-      const convList = (res.data?.conversations || []).map((c) => ({
-        ...c,
-        messages: c.messages || [],
-      }));
-      setConversations(convList);
-      return convList;
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to load conversations.';
-      console.error('[MatchContext] Error loading conversations:', msg);
-      setConversationsError(msg);
-      setConversations([]);
-      return [];
-    } finally {
-      setConversationsLoading(false);
-    }
-  }, []);
-
-  // On-demand fetch messages for a specific conversation
-  const fetchMessagesForUser = useCallback(async (userId) => {
-    if (!userId) return [];
-    try {
-      const res = await chatService.getMessages(userId);
-      const msgs = res.data?.messages || [];
-      setConversations((prev) =>
-        prev.map((c) => (c.userId === userId ? { ...c, messages: msgs } : c))
-      );
-      return msgs;
-    } catch (err) {
-      console.error('[MatchContext] Error loading thread messages:', err.message);
-      return [];
-    }
-  }, []);
-
   // Synchronize on authentication change
   useEffect(() => {
     if (!isAuthenticated) {
       setMatches([]);
       setRequests([]);
-      setConversations([]);
       setPreferences(null);
       setMatchesError(null);
       setRequestsError(null);
-      setConversationsError(null);
       setPreferencesError(null);
       return;
     }
@@ -172,7 +126,6 @@ export function MatchProvider({ children }) {
           fetchPreferences(),
           fetchMatches(),
           fetchRequests(),
-          fetchConversations(),
         ]);
       } catch (err) {
         console.error('[MatchContext] Synchronization error:', err);
@@ -186,7 +139,7 @@ export function MatchProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, fetchPreferences, fetchMatches, fetchRequests, fetchConversations]);
+  }, [isAuthenticated, fetchPreferences, fetchMatches, fetchRequests]);
 
   // Send a roommate request to a candidate
   const sendRequest = async (matchUser, customMessage = '') => {
@@ -209,11 +162,12 @@ export function MatchProvider({ children }) {
   };
 
   // Accept an incoming request
+  // Accept an incoming request
   const acceptRequest = async (requestId) => {
     try {
       const res = await requestService.acceptRequest(requestId);
-      await Promise.all([fetchRequests(), fetchConversations()]);
-      showToast(res.message || 'Roommate request accepted! Chat unlocked.', 'success');
+      await fetchRequests();
+      showToast(res.message || 'Roommate request accepted! Roommate connection confirmed.', 'success');
       return true;
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to accept request.';
@@ -250,44 +204,6 @@ export function MatchProvider({ children }) {
     }
   };
 
-  // Send a message in a conversation thread
-  const sendMessage = async (conversationIdOrUserId, text) => {
-    if (!text || !text.trim()) return false;
-
-    // Resolve recipient user ID
-    let receiverId = conversationIdOrUserId;
-    const matchedConv = conversations.find((c) => c.id === conversationIdOrUserId);
-    if (matchedConv) {
-      receiverId = matchedConv.userId;
-    }
-
-    try {
-      const res = await chatService.sendMessage(receiverId, text.trim());
-      const sentMsg = res.data?.message;
-
-      // Update state immediately with sent message
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.userId === receiverId || c.id === conversationIdOrUserId) {
-            return {
-              ...c,
-              lastMessage: text.trim(),
-              lastMessageTime: 'Just now',
-              messages: [...(c.messages || []), sentMsg],
-            };
-          }
-          return c;
-        })
-      );
-
-      return true;
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to send message.';
-      showToast(msg, 'error');
-      return false;
-    }
-  };
-
   // Save lifestyle questionnaire answers
   const submitQuestionnaire = async (answers) => {
     try {
@@ -313,9 +229,6 @@ export function MatchProvider({ children }) {
         requests,
         requestsLoading,
         requestsError,
-        conversations,
-        conversationsLoading,
-        conversationsError,
         preferences,
         preferencesLoading,
         preferencesError,
@@ -323,14 +236,11 @@ export function MatchProvider({ children }) {
         fetchMatches,
         refreshMatches: fetchMatches,
         fetchRequests,
-        fetchConversations,
-        fetchMessagesForUser,
         fetchPreferences,
         sendRequest,
         acceptRequest,
         rejectRequest,
         cancelRequest,
-        sendMessage,
         submitQuestionnaire,
         setPreferences,
       }}

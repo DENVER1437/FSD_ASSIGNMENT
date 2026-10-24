@@ -5,8 +5,7 @@ import {
   Clock,
   ArrowRight,
   ClipboardCheck,
-  CheckCircle2,
-  MessageSquare,
+  Check,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -152,10 +151,8 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      {/* Main Grid: Top Recommended Matches & Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Recommended Matches List */}
-        <div className="lg:col-span-8 space-y-4">
+      {/* Top Recommended Matches */}
+      <div className="space-y-4">
           <div className="flex items-center justify-between pb-1">
             <div>
               <h2 className="text-lg font-bold text-charcoal">Top Compatible Roommates</h2>
@@ -173,9 +170,16 @@ export function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-4">
             {topMatches.map((match) => {
-              const isRequested = requests.some(
-                (r) => r.receiverId === match.user.id || r.senderId === match.user.id
+              const candidateId = match.user?._id || match.user?.id || match.userId;
+              const existingReq = requests.find(
+                (r) =>
+                  (r.receiverId === candidateId || r.senderId === candidateId) &&
+                  r.status !== 'rejected'
               );
+              const isAccepted = existingReq?.status === 'accepted';
+              const hasRequested = Boolean(existingReq);
+              const topThreeTraits = (match.commonPreferences || []).slice(0, 3);
+
               return (
                 <Card
                   key={match.id}
@@ -184,21 +188,18 @@ export function DashboardPage() {
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
                       <Avatar
-                        src={match.user.profileImage}
-                        name={match.user.name}
+                        src={match.user?.profileImage}
+                        name={match.user?.name}
                         size="lg"
                       />
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-base text-charcoal">
-                            {match.user.name}, {match.user.age}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-stone-500">
-                          {match.user.college} • {match.user.course}
-                        </p>
-                        <p className="text-xs text-stone-600 line-clamp-2 pt-1 max-w-lg">
-                          "{match.user.bio}"
+                        <h3 className="font-bold text-base text-charcoal">
+                          {match.user?.name}
+                        </h3>
+                        <p className="text-xs text-stone-500 flex items-center gap-1.5 font-medium">
+                          <span>{match.user?.college || 'Nirma University'}</span>
+                          <span className="text-stone-300">•</span>
+                          <span className="text-stone-600">{match.user?.city || 'Ahmedabad'}</span>
                         </p>
                       </div>
                     </div>
@@ -206,35 +207,36 @@ export function DashboardPage() {
                     <ScoreBadge score={match.score} size="md" className="self-start" />
                   </div>
 
-                  {/* Shared Habits preview */}
-                  <div className="mt-4 pt-4 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {match.commonPreferences.slice(0, 2).map((pref, idx) => (
+                  {/* Top 3 Matching Questionnaire Info */}
+                  <div className="mt-4 pt-4 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex flex-wrap gap-1.5 max-w-xl">
+                      {topThreeTraits.map((pref, idx) => (
                         <span
                           key={idx}
-                          className="text-[11px] font-medium bg-stone-100 text-stone-700 px-2.5 py-1 rounded-lg"
+                          className="text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/60 px-2.5 py-1 rounded-lg flex items-center gap-1"
                         >
-                          ✓ {pref}
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          <span>{pref}</span>
                         </span>
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/matches/${match.id}`)}
-                        className="flex-1 sm:flex-none justify-center"
+                        className="flex-1 sm:flex-none justify-center text-xs"
                       >
                         View Profile
                       </Button>
                       <Button
                         size="sm"
-                        disabled={isRequested}
+                        disabled={hasRequested}
                         onClick={() => sendRequest(match.user)}
-                        className="flex-1 sm:flex-none justify-center"
+                        className="flex-1 sm:flex-none justify-center text-xs"
                       >
-                        {isRequested ? 'Requested' : 'Send Request'}
+                        {isAccepted ? 'Connected' : hasRequested ? 'Requested' : 'Send Request'}
                       </Button>
                     </div>
                   </div>
@@ -242,85 +244,6 @@ export function DashboardPage() {
               );
             })}
           </div>
-        </div>
-
-        {/* Recent Activity & Next Steps */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card className="p-5">
-            <h3 className="font-bold text-sm text-charcoal mb-4 flex items-center justify-between">
-              <span>Recent Activity</span>
-              <span className="text-[10px] uppercase font-bold text-stone-400">Live Feed</span>
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <UserCheck className="w-4 h-4" />
-                </div>
-                <div className="text-xs">
-                  <p className="font-semibold text-charcoal">
-                    Connected with Marcus Taylor
-                  </p>
-                  <p className="text-stone-500">Mutual roommate request accepted</p>
-                  <span className="text-[10px] text-stone-400">Yesterday</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div className="text-xs">
-                  <p className="font-semibold text-charcoal">
-                    New Request from Jordan Lee
-                  </p>
-                  <p className="text-stone-500">94% Compatibility match</p>
-                  <span className="text-[10px] text-stone-400">2 days ago</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-                <div className="text-xs">
-                  <p className="font-semibold text-charcoal">
-                    Lifestyle Survey Saved
-                  </p>
-                  <p className="text-stone-500">Weights applied across 15 criteria</p>
-                  <span className="text-[10px] text-stone-400">Last week</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Quick Chat Shortcut */}
-          <Card className="p-5 bg-stone-900 text-white">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm">Roommate Chat</h4>
-                <p className="text-[11px] text-stone-400">
-                  {acceptedRequests.length > 0 ? `${acceptedRequests.length} Active Connection` : 'Connected conversations'}
-                </p>
-              </div>
-            </div>
-            <p className="text-xs text-stone-300 mb-4 leading-relaxed">
-              {acceptedRequests.length > 0
-                ? `You have ${acceptedRequests.length} mutual connection. Coordinate apartment visits and discuss lease splits directly.`
-                : 'Send roommate requests to your top matches to unlock direct mutual messaging.'}
-            </p>
-            <Button
-              size="sm"
-              onClick={() => navigate('/chat')}
-              className="w-full justify-center bg-white text-stone-900 hover:bg-stone-100"
-            >
-              Open Messages
-            </Button>
-          </Card>
-        </div>
       </div>
     </div>
   );

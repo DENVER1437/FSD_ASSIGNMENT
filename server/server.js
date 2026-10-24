@@ -9,7 +9,6 @@ import userRoutes from './routes/userRoutes.js';
 import preferenceRoutes from './routes/preferenceRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import requestRoutes from './routes/requestRoutes.js';
-import messageRoutes from './routes/messageRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
 // Middleware
@@ -122,7 +121,6 @@ app.use('/api/users', requireDB, userRoutes);
 app.use('/api/preferences', requireDB, preferenceRoutes);
 app.use('/api/matches', requireDB, matchRoutes);
 app.use('/api/requests', requireDB, requestRoutes);
-app.use('/api/messages', requireDB, messageRoutes);
 app.use('/api/admin', requireDB, adminRoutes);
 
 // 404 Catch-All & Centralized Error Middleware
