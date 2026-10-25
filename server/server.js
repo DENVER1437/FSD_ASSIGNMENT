@@ -15,6 +15,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
 import { validateJwtConfig } from './utils/jwt.js';
 import { requireDB } from './middleware/requireDB.js';
+import { ensureDemoData } from './services/demoSeedService.js';
 
 // Load environment variables
 dotenv.config();
@@ -121,6 +122,16 @@ app.get('/api/ready', (req, res) => {
   }
 });
 
+// Idempotent demo data verification endpoint
+app.get('/api/seed-demo', async (req, res) => {
+  try {
+    await ensureDemoData();
+    res.status(200).json({ success: true, message: 'Demo accounts verified and available in database.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Mount Core Application Routes (Protected with database readiness verification)
 app.use('/api/auth', requireDB, authRoutes);
 app.use('/api/users', requireDB, userRoutes);
@@ -140,6 +151,7 @@ const startServer = async () => {
   try {
     // Connect to database before accepting requests
     await connectDB();
+    await ensureDemoData();
 
     server = app.listen(PORT, () => {
       console.log(`[NestMatch Server] Active on port ${PORT}`);
