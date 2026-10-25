@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # NestMatch – Smart Roommate Compatibility Finder
 
 [![Stack](https://img.shields.io/badge/Stack-MERN%20(React%2019%20%2B%20Express%20%2B%20MongoDB)-blue.svg)](#-tech-stack)
@@ -212,3 +213,6 @@ For in-depth architectural and design documents, check the `docs/` folder:
 
 * **Meet Kotecha** – Full Stack Development (FSD) Assignment
 * **License**: MIT
+=======
+# FSD_ASSIGNMENT
+>>>>>>> 468cd19ece79f88f42b03f1431c106f8c470bbe0
