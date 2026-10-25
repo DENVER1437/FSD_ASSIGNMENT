@@ -1,72 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bell,
-  Shield,
   LogOut,
   User,
-  Loader2,
+  ShieldCheck,
+  Building,
+  GraduationCap,
+  MapPin,
+  Mail,
 } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Checkbox from '../components/Checkbox';
 import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { userService } from '../services/userService';
 
 export function SettingsPage() {
-  const { user, updateUser, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [showSignoutModal, setShowSignoutModal] = useState(false);
-  const [savingKey, setSavingKey] = useState(null);
-
-  // Real persisted settings state derived from user account
-  const [settings, setSettings] = useState({
-    emailNotifications: user?.settings?.emailNotifications ?? true,
-    matchAlerts: user?.settings?.matchAlerts ?? true,
-    requestAlerts: user?.settings?.requestAlerts ?? true,
-    hideBudgetFromPublic: user?.settings?.hideBudgetFromPublic ?? false,
-  });
-
-  // Keep local state in sync when user context refreshes
-  useEffect(() => {
-    if (user?.settings) {
-      setSettings({
-        emailNotifications: user.settings.emailNotifications ?? true,
-        matchAlerts: user.settings.matchAlerts ?? true,
-        requestAlerts: user.settings.requestAlerts ?? true,
-        hideBudgetFromPublic: user.settings.hideBudgetFromPublic ?? false,
-      });
-    }
-  }, [user?.settings]);
-
-  const handleToggle = async (key) => {
-    const previousValue = settings[key];
-    const nextValue = !previousValue;
-    const nextSettings = { ...settings, [key]: nextValue };
-
-    // Optimistically update
-    setSettings(nextSettings);
-    setSavingKey(key);
-
-    try {
-      const res = await userService.updateMySettings({ [key]: nextValue });
-      if (res.data?.user) {
-        updateUser(res.data.user);
-      }
-      showToast('Setting saved successfully.', 'success');
-    } catch (err) {
-      // Revert optimistic state on failure
-      setSettings((prev) => ({ ...prev, [key]: previousValue }));
-      showToast(err.response?.data?.message || 'Failed to update setting.', 'error');
-    } finally {
-      setSavingKey(null);
-    }
-  };
 
   const handleConfirmSignout = () => {
     logout();
@@ -75,120 +30,82 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-150">
+    <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-150">
       <PageHeader
-        title="Settings & Preferences"
-        subtitle="Manage account details, notification preferences, and active student session."
+        title="Settings & Session"
+        subtitle="Manage your student account information and active login session."
       />
 
       {/* Account Info Card */}
-      <Card className="p-6 sm:p-8 space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-charcoal flex items-center gap-2 pb-3 border-b border-stone-100">
-          <User className="w-4 h-4 text-brand-600" />
-          Account Summary
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <span className="text-stone-400 font-medium">Logged In Name</span>
-            <p className="font-bold text-sm text-charcoal mt-0.5">{user?.name}</p>
-          </div>
-          <div>
-            <span className="text-stone-400 font-medium">Student Email</span>
-            <p className="font-bold text-sm text-charcoal mt-0.5">{user?.email}</p>
-          </div>
-          <div>
-            <span className="text-stone-400 font-medium">Institution</span>
-            <p className="font-bold text-sm text-charcoal mt-0.5">{user?.college || 'Not set'}</p>
-          </div>
-          <div>
-            <span className="text-stone-400 font-medium">Platform Role</span>
-            <p className="font-bold text-sm text-brand-700 uppercase mt-0.5">{user?.role || 'student'}</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Notification Preferences */}
-      <Card className="p-6 sm:p-8 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+      <Card className="p-6 sm:p-8 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-stone-100">
           <h3 className="text-sm font-bold uppercase tracking-wider text-charcoal flex items-center gap-2">
-            <Bell className="w-4 h-4 text-brand-600" />
-            Notification Preferences
+            <User className="w-4 h-4 text-brand-600" />
+            Account Summary
           </h3>
-          <span className="text-xs text-stone-400">Auto-saved to your profile</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Active Account
+          </span>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-start justify-between">
-            <Checkbox
-              label="Roommate Request Alerts"
-              description="Receive in-app and email alerts whenever another student invites you to connect."
-              checked={settings.requestAlerts}
-              onChange={() => handleToggle('requestAlerts')}
-              disabled={savingKey === 'requestAlerts'}
-            />
-            {savingKey === 'requestAlerts' && <Loader2 className="w-4 h-4 text-brand-600 animate-spin mt-1" />}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
+          <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 space-y-1">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5" /> Logged In Name
+            </span>
+            <p className="font-bold text-sm text-charcoal">{user?.name || 'Student'}</p>
           </div>
 
-          <div className="flex items-start justify-between">
-            <Checkbox
-              label="High Compatibility Match Notifications"
-              description="Alert me when a candidate matching 90%+ registers in my campus pool."
-              checked={settings.matchAlerts}
-              onChange={() => handleToggle('matchAlerts')}
-              disabled={savingKey === 'matchAlerts'}
-            />
-            {savingKey === 'matchAlerts' && <Loader2 className="w-4 h-4 text-brand-600 animate-spin mt-1" />}
+          <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 space-y-1">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5" /> Registered Email
+            </span>
+            <p className="font-bold text-sm text-charcoal">{user?.email}</p>
           </div>
 
-
-          {/* Unsupported Mock Feature clearly identified */}
-          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 opacity-60">
-            <Checkbox
-              label="Weekly Campus Housing Digest (Planned for v2.0)"
-              description="Periodic email summary of newly posted student apartment groups. (Currently disabled as email service is not configured in local environment)."
-              checked={false}
-              disabled={true}
-            />
+          <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 space-y-1">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <Building className="w-3.5 h-3.5" /> University / College
+            </span>
+            <p className="font-bold text-sm text-charcoal">{user?.college || 'Not set'}</p>
           </div>
+
+          <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 space-y-1">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5" /> Program / Course
+            </span>
+            <p className="font-bold text-sm text-charcoal">{user?.course || 'Not set'}</p>
+          </div>
+
+          <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 space-y-1">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" /> Current City
+            </span>
+            <p className="font-bold text-sm text-charcoal">{user?.city || 'Not set'}</p>
+          </div>
+
+          <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-100 space-y-1">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" /> Platform Role
+            </span>
+            <p className="font-bold text-sm text-brand-700 uppercase">{user?.role || 'student'}</p>
+          </div>
+        </div>
+
+        <div className="pt-2 flex items-center justify-between text-xs text-stone-500">
+          <span>Need to update your academic details or bio?</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/profile')}
+          >
+            Edit Profile
+          </Button>
         </div>
       </Card>
 
-      {/* Privacy Controls */}
-      <Card className="p-6 sm:p-8 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-charcoal flex items-center gap-2">
-            <Shield className="w-4 h-4 text-brand-600" />
-            Privacy & Visibility Controls
-          </h3>
-          <span className="text-xs text-stone-400">Persisted securely</span>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-start justify-between">
-            <Checkbox
-              label="Hide Exact Budget Range on Public Match Cards"
-              description="Keep specific rent targets confidential until mutual roommate request acceptance."
-              checked={settings.hideBudgetFromPublic}
-              onChange={() => handleToggle('hideBudgetFromPublic')}
-              disabled={savingKey === 'hideBudgetFromPublic'}
-            />
-            {savingKey === 'hideBudgetFromPublic' && <Loader2 className="w-4 h-4 text-brand-600 animate-spin mt-1" />}
-          </div>
-
-          {/* Unsupported Mock Feature clearly identified */}
-          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 opacity-60">
-            <Checkbox
-              label="Restrict Search to Verified Campus Students Only (Coming in v2.0)"
-              description="Only allow students from your registered university to inspect match details. (Currently all users are registered college students)."
-              checked={true}
-              disabled={true}
-            />
-          </div>
-        </div>
-      </Card>
-
-      {/* Danger Zone: Session Signout */}
+      {/* Session Signout Card */}
       <Card className="p-6 sm:p-8 border-rose-200 bg-rose-50/20 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

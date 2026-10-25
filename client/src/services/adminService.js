@@ -44,6 +44,11 @@ export const adminService = {
     const response = await api.put(`/admin/reports/${reportId}`, data);
     return response.data;
   },
+
+  getAcceptedPairs: async () => {
+    const response = await api.get('/admin/accepted-pairs');
+    return response.data;
+  },
 };
 
 export default adminService;

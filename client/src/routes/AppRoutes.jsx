@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ROUTES } from '../constants/routes';
 
 // Guards
@@ -26,7 +26,7 @@ import SettingsPage from '../pages/SettingsPage';
 // Admin Pages
 import AdminDashboardPage from '../pages/AdminDashboardPage';
 import AdminUsersPage from '../pages/AdminUsersPage';
-import AdminReportsPage from '../pages/AdminReportsPage';
+import AdminAcceptedPairsPage from '../pages/AdminAcceptedPairsPage';
 
 // Fallback
 import NotFoundPage from '../pages/NotFoundPage';
@@ -61,7 +61,8 @@ export default function AppRoutes() {
         <Route element={<AdminLayout />}>
           <Route path={ROUTES.ADMIN_DASHBOARD} element={<AdminDashboardPage />} />
           <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
-          <Route path={ROUTES.ADMIN_REPORTS} element={<AdminReportsPage />} />
+          <Route path={ROUTES.ADMIN_ACCEPTED_PAIRS} element={<AdminAcceptedPairsPage />} />
+          <Route path="/admin/reports" element={<Navigate to="/admin" replace />} />
         </Route>
       </Route>
 

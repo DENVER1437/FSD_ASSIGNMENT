@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   Users,
-  AlertTriangle,
+  UserCheck,
   LayoutDashboard,
   ArrowLeft,
   LogOut,
@@ -26,7 +26,7 @@ export function AdminLayout() {
   const navLinks = [
     { label: 'Admin Overview', to: '/admin', icon: LayoutDashboard },
     { label: 'User Directory', to: '/admin/users', icon: Users },
-    { label: 'Reports & Flags', to: '/admin/reports', icon: AlertTriangle },
+    { label: 'Accepted Pairs', to: '/admin/accepted-pairs', icon: UserCheck },
   ];
 
   return (

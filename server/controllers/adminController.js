@@ -2,6 +2,7 @@ import { User } from '../models/User.js';
 import { Preference } from '../models/Preference.js';
 import { Request } from '../models/Request.js';
 import { Report } from '../models/Report.js';
+import { calculateCompatibility } from '../services/matchingService.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess, sendError } from '../utils/apiResponse.js';
 
@@ -240,3 +241,101 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, { report }, 'Report updated successfully');
 });
+
+/**
+ * @desc    Get detailed list of accepted roommate pairs
+ * @route   GET /api/admin/accepted-pairs
+ * @access  Private (Admin only)
+ */
+export const getAcceptedPairs = asyncHandler(async (req, res) => {
+  const requests = await Request.find({ status: 'accepted' })
+    .populate('senderId', 'name email college course city phone bio profileImage isProfileComplete status')
+    .populate('receiverId', 'name email college course city phone bio profileImage isProfileComplete status')
+    .sort('-updatedAt');
+
+  // Filter out any where sender or receiver was deleted
+  const validRequests = requests.filter((r) => r.senderId && r.receiverId);
+
+  const userIds = [
+    ...new Set(
+      validRequests.flatMap((r) => [r.senderId._id.toString(), r.receiverId._id.toString()])
+    ),
+  ];
+
+  const preferences = await Preference.find({ userId: { $in: userIds } });
+  const prefMap = new Map();
+  preferences.forEach((p) => prefMap.set(p.userId.toString(), p));
+
+  const pairs = validRequests.map((r) => {
+    const senderPref = prefMap.get(r.senderId._id.toString());
+    const receiverPref = prefMap.get(r.receiverId._id.toString());
+    let compatibility = null;
+
+    if (senderPref && receiverPref) {
+      compatibility = calculateCompatibility(senderPref, receiverPref);
+    }
+
+    return {
+      id: r._id,
+      requestDate: r.createdAt,
+      acceptedDate: r.updatedAt,
+      message: r.message,
+      sender: {
+        id: r.senderId._id,
+        name: r.senderId.name,
+        email: r.senderId.email,
+        college: r.senderId.college,
+        course: r.senderId.course,
+        city: r.senderId.city,
+        phone: r.senderId.phone,
+        bio: r.senderId.bio,
+        profileImage: r.senderId.profileImage,
+        status: r.senderId.status,
+        preferences: senderPref ? {
+          budget: senderPref.budget,
+          sleepSchedule: senderPref.sleepSchedule,
+          cleanliness: senderPref.cleanliness,
+          foodPreference: senderPref.foodPreference,
+          noisePreference: senderPref.noisePreference,
+          studyHabit: senderPref.studyHabit,
+          socialLevel: senderPref.socialLevel,
+          smokingPreference: senderPref.smokingPreference,
+        } : null,
+      },
+      receiver: {
+        id: r.receiverId._id,
+        name: r.receiverId.name,
+        email: r.receiverId.email,
+        college: r.receiverId.college,
+        course: r.receiverId.course,
+        city: r.receiverId.city,
+        phone: r.receiverId.phone,
+        bio: r.receiverId.bio,
+        profileImage: r.receiverId.profileImage,
+        status: r.receiverId.status,
+        preferences: receiverPref ? {
+          budget: receiverPref.budget,
+          sleepSchedule: receiverPref.sleepSchedule,
+          cleanliness: receiverPref.cleanliness,
+          foodPreference: receiverPref.foodPreference,
+          noisePreference: receiverPref.noisePreference,
+          studyHabit: receiverPref.studyHabit,
+          socialLevel: receiverPref.socialLevel,
+          smokingPreference: receiverPref.smokingPreference,
+        } : null,
+      },
+      compatibilityScore: compatibility ? compatibility.score : 85,
+      compatibilityTier: compatibility ? compatibility.compatibilityTier : 'High Match',
+      commonPreferences: compatibility ? compatibility.commonPreferences : [],
+      differences: compatibility ? compatibility.differences : [],
+      categoryBreakdown: compatibility ? compatibility.categoryBreakdown : [],
+    };
+  });
+
+  return sendSuccess(
+    res,
+    { pairs, total: pairs.length },
+    'Accepted roommate pairs retrieved successfully'
+  );
+});
+

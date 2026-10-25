@@ -6,6 +6,7 @@ import {
   deleteUser,
   getReports,
   updateReportStatus,
+  getAcceptedPairs,
 } from '../controllers/adminController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 import { validateObjectId } from '../middleware/validateObjectId.js';
@@ -19,6 +20,7 @@ router.use(authorize('admin'));
 router.get('/dashboard', getAdminDashboard);
 router.get('/metrics', getAdminDashboard);
 router.get('/users', getUsers);
+router.get('/accepted-pairs', getAcceptedPairs);
 router.put('/users/:id/status', validateObjectId('id'), updateUserStatus);
 router.delete('/users/:id', validateObjectId('id'), deleteUser);
 router.get('/reports', getReports);

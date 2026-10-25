@@ -20,5 +20,5 @@ export const ROUTES = {
   // Admin Protected Routes
   ADMIN_DASHBOARD: '/admin',
   ADMIN_USERS: '/admin/users',
-  ADMIN_REPORTS: '/admin/reports',
+  ADMIN_ACCEPTED_PAIRS: '/admin/accepted-pairs',
 };
