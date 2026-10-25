@@ -30,7 +30,7 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 // Security & Parsing Middleware
 const clientUrls = (process.env.CLIENT_URL || '')
   .split(',')
-  .map((url) => url.trim())
+  .map((url) => url.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, ''))
   .filter(Boolean);
 
 const allowedOrigins = [
@@ -54,7 +54,12 @@ app.use(
       if (!origin) {
         return callback(null, true);
       }
-      if (allowedOrigins.includes(origin)) {
+      const normalizedOrigin = origin.replace(/\/+$/, '');
+      if (allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      // Automatically permit any Vercel deployment domain (including preview URLs)
+      if (normalizedOrigin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
       if (process.env.NODE_ENV !== 'production') {
@@ -63,6 +68,7 @@ app.use(
           return callback(null, true);
         }
       }
+      console.warn(`[CORS Blocked]: Origin '${origin}' is not authorized. Allowed origins:`, allowedOrigins);
       return callback(new Error(`Blocked by CORS policy: origin '${origin}' is not authorized.`));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
