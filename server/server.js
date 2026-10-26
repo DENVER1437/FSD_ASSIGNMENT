@@ -51,7 +51,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, server-to-server curl, verification scripts, Docker internal proxy)
+      // Allow requests with no origin (like mobile apps, server-to-server curl, verification scripts)
       if (!origin) {
         return callback(null, true);
       }
@@ -163,7 +163,6 @@ const startServer = async () => {
       if (err.code === 'EADDRINUSE') {
         console.error(`[FATAL PORT ERROR]: Port ${PORT} is already occupied by another process.`);
         console.error(`To diagnose the occupying process on Windows, run: netstat -ano | findstr :${PORT}`);
-        console.error(`If running Docker simultaneously, ensure Docker backend host port is mapped to 5001 ("5001:5000") in docker-compose.yml so host port 5000 remains available for local development.`);
         process.exit(1);
       }
     });

@@ -1,9 +1,7 @@
-<<<<<<< HEAD
 # NestMatch – Smart Roommate Compatibility Finder
 
 [![Stack](https://img.shields.io/badge/Stack-MERN%20(React%2019%20%2B%20Express%20%2B%20MongoDB)-blue.svg)](#-tech-stack)
 [![Tests](https://img.shields.io/badge/Tests-55%2F55%20Passing-brightgreen.svg)](#-testing)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker)](#-quick-start)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 **NestMatch** is a full-stack MERN application designed for college and university students to find compatible roommates through a 15-question lifestyle questionnaire and a transparent, weighted compatibility scoring engine.
@@ -19,7 +17,7 @@ Instead of random room allocations, students can compare habits (sleep, cleanlin
 - 🤝 **Mutual Request Lifecycle**: Direct messaging is safely locked until both students accept an invitation.
 - 💬 **Private Direct Chat**: Real-time persisted conversation history between accepted roommates.
 - 🛡️ **Role-Based Admin Console**: Moderate users, review safety reports, and monitor platform metrics.
-- 🐳 **Dockerized & Production-Ready**: Containerized with Nginx reverse proxy and health probes.
+- 🚀 **Cloud & Production Ready**: Seamless deployment with SPA client-side rewrites and automated security validations.
 
 ---
 
@@ -31,35 +29,13 @@ Instead of random room allocations, students can compare habits (sleep, cleanlin
 | **Backend** | Node.js, Express.js (REST API, Rate Limiting, CORS) |
 | **Database** | MongoDB, Mongoose (ODM with strict schemas & indexes) |
 | **Security** | JWT (JSON Web Tokens), bcryptjs password hashing (10 rounds) |
-| **DevOps** | Docker, Docker Compose, Nginx (Alpine) |
+| **Deployment** | Vercel (Frontend SPA), Node.js (Backend REST API) |
 
 ---
 
 ## 🚀 Quick Start
 
-### Option A: Using Docker (Recommended)
-
-Make sure Docker Desktop is running, then run:
-
-```bash
-# 1. Build and start containers
-docker compose up --build -d
-
-# 2. Check running status
-docker compose ps
-```
-
-* **Frontend UI**: [http://localhost:8080](http://localhost:8080)
-* **Backend API**: [http://localhost:5001/api](http://localhost:5001/api)
-* **API Health Check**: [http://localhost:8080/api/health](http://localhost:8080/api/health)
-
-To stop the containers: `docker compose down`
-
----
-
-### Option B: Local Development
-
-#### 1. Backend Setup
+### 1. Backend Setup
 ```bash
 cd server
 npm install
@@ -184,16 +160,14 @@ fsd-assignment/
 │   │   ├── context/        # Auth & App state providers
 │   │   ├── pages/          # Landing, Dashboard, Matches, Chat, Admin
 │   │   └── services/       # Axios API client & helpers
-│   └── Dockerfile          # Multi-stage Nginx build
+│   └── vercel.json         # SPA client-side routing rewrites
 ├── server/                 # Express.js REST API
 │   ├── config/             # MongoDB connection & diagnostics
 │   ├── controllers/        # Route handlers (Auth, Matches, Chat, Admin)
 │   ├── middleware/         # Auth, RBAC, error handler, rate limiters
 │   ├── models/             # Mongoose schemas (User, Preference, Request, etc.)
 │   ├── services/           # Matching algorithm engine
-│   ├── tests/              # Automated unit & integration tests
-│   └── Dockerfile          # Hardened Node.js Alpine container
-├── docker-compose.yml      # Multi-container orchestration
+│   └── tests/              # Automated unit & integration tests
 └── docs/                   # Detailed technical documentation
 ```
 
@@ -213,6 +187,4 @@ For in-depth architectural and design documents, check the `docs/` folder:
 
 * **Meet Kotecha** – Full Stack Development (FSD) Assignment
 * **License**: MIT
-=======
-# FSD_ASSIGNMENT
->>>>>>> 468cd19ece79f88f42b03f1431c106f8c470bbe0
+
